@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src https://nxavnxvcsfksvhtguvaq.supabase.co; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#003741">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ocorrência">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>DOE · Registar ocorrência</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header class="topo">
+  <div class="marca">DOE Facade<small id="quem">Registar ocorrência</small></div>
+  <button type="button" id="sair" class="link" hidden>Sair</button>
+</header>
+<div id="faixa" class="faixa" role="status" aria-live="polite" hidden></div>
+<button type="button" id="nova-versao" class="faixa faixa-botao" hidden>Há uma versão nova, toca para atualizar</button>
+<div id="alheios" class="alheios" aria-live="polite" hidden></div>
+
+<main>
+  <!-- Entrar -->
+  <section id="v-login" hidden aria-labelledby="t-login">
+    <h1 id="t-login">Entrar</h1>
+    <p class="suave" id="login-nota">Usa a tua conta do DOE. Só é preciso uma vez; a sessão fica neste telemóvel durante 10 dias.</p>
+    <form id="f-login" autocomplete="on">
+      <label for="l-user">Utilizador</label>
+      <input type="text" id="l-user" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text" required>
+      <label for="l-pass">Palavra-passe</label>
+      <input type="password" id="l-pass" name="password" autocomplete="current-password" required>
+      <p class="erro" id="login-erro" role="alert" hidden></p>
+      <div class="espaco"></div>
+      <button type="submit" class="btn pri grande" id="l-ok">Entrar</button>
+    </form>
+  </section>
+
+  <!-- Registar -->
+  <section id="v-registo" hidden aria-labelledby="t-registo">
+    <h1 id="t-registo">O que se passa na obra?</h1>
+    <label for="obra">Obra</label>
+    <select id="obra"></select>
+    <p class="erro" id="e-obra" role="alert" hidden></p>
+
+    <div class="rotulo">Fotos</div>
+    <div class="par">
+      <button type="button" class="btn pri grande" id="b-cam">Tirar foto</button>
+      <button type="button" class="btn grande" id="b-gal">Da galeria</button>
+    </div>
+    <input type="file" id="i-cam" accept="image/*" capture="environment" class="oculto" tabindex="-1" aria-hidden="true">
+    <input type="file" id="i-gal" accept="image/*" multiple class="oculto" tabindex="-1" aria-hidden="true">
+    <p class="estado pulsa" id="foto-prep" hidden>A preparar a foto…</p>
+    <p class="erro" id="e-fotos" role="alert" hidden></p>
+    <div class="minis" id="minis"></div>
+
+    <label for="texto">O que se passa?</label>
+    <textarea id="texto" maxlength="4000" placeholder="O que viu e onde? Material, fabrico ou montagem." enterkeyhint="enter"></textarea>
+    <p class="erro" id="e-texto" role="alert" hidden></p>
+
+    <details class="classif" id="classif" hidden>
+      <summary><span class="classif-tit">Se já souberes: o que foi?</span><span class="classif-res" id="classif-res">opcional</span></summary>
+      <div class="classif-corpo">
+        <div class="rotulo" id="c-rot-prod">Produto</div>
+        <div class="chips" id="c-produtos" role="group" aria-labelledby="c-rot-prod"></div>
+        <div id="c-defeitos"></div>
+      </div>
+    </details>
+
+    <div class="espaco"></div>
+    <button type="button" class="btn pri grande" id="b-enviar">Enviar</button>
+    <p class="suave centro" id="rasc-nota"></p>
+  </section>
+
+  <!-- Envio, guardada, recebida -->
+  <section id="v-envio" hidden aria-live="polite">
+    <div class="centro">
+      <div class="selo" id="e-selo" aria-hidden="true">✓</div>
+      <h1 id="e-titulo"></h1>
+      <div class="grande-num" id="e-num" hidden></div>
+      <p class="suave" id="e-sub"></p>
+    </div>
+    <div class="cartao" id="ev-fotos" hidden></div>
+    <p class="erro" id="e-erro" role="alert" hidden></p>
+    <div class="espaco"></div>
+    <button type="button" class="btn pri grande" id="e-retry" hidden>Tentar de novo</button>
+    <button type="button" class="btn grande" id="e-corrigir" hidden>Corrigir</button>
+    <div class="espaco"></div>
+    <button type="button" class="btn grande" id="e-nova">Nova ocorrência</button>
+  </section>
+</main>
+
+<script src="config.js"></script>
+<script src="classificacao.js"></script>
+<script src="logica.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

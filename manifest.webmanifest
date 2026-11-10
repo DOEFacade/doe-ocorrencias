@@ -1,0 +1,15 @@
+{
+  "name": "DOE · Registar ocorrência",
+  "short_name": "Ocorrência",
+  "description": "Regista uma ocorrência de obra com fotos, fora da rede da empresa.",
+  "lang": "pt-PT",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F7F5",
+  "theme_color": "#003741",
+  "icons": [
+    { "src": "icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
