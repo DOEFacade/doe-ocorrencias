@@ -21,6 +21,7 @@
     servidorBytes: 5 * 1024 * 1024,
     margemTokenMs: 60 * 1000,
     msPrepararFoto: 15 * 1000,   // uma foto «A preparar» que demore mais do que isto falha (e desbloqueia o envio)
+    msLogin: 20 * 1000,          // o pedido de entrada que não responde em 20 s desiste (rede fraca): o botão volta para tentar outra vez
   };
   var ESPERAS_MS = [2000, 10000, 60000];   // 2 s, 10 s, 1 min; depois só quando voltar a rede
   var PASSOS_COMPRESSAO = [
@@ -410,14 +411,24 @@
     var er = (j && j.error) || {};
     return { ok: false, status: res.status, code: er.code || '', message: er.message || '', details: er.details || {}, retryAfter: lerRetryAfter(res, er) };
   }
-  /** POST /auth/login-movel. A palavra-passe só viaja neste pedido; devolve { ok, sessao } ou { ok:false, msg }. */
+  /** POST /auth/login-movel. A palavra-passe só viaja neste pedido; devolve { ok, sessao } ou { ok:false, msg }.
+      Com prazo (LIMITES.msLogin, ou deps.msLogin): numa rede que não responde, o pedido é abortado e devolve-se o aviso
+      de rede, para a pessoa poder tentar outra vez (o «A entrar…» não fica para sempre). */
   async function login(deps, username, password) {
-    var res;
-    try {
-      res = await deps.fetch(deps.base + '/auth/login-movel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: String(username || '').trim(), password: String(password || '') }) });
-    } catch (e) { return { ok: false, rede: true, msg: (deps.online && deps.online() === false) ? 'Para entrar é preciso rede. Verifica a ligação e tenta outra vez.' : 'Não consegui falar com o servidor (rede fraca ou página sem autorização). Tenta outra vez.' }; }
-    var j = null;
-    try { j = await res.json(); } catch (e) { j = null; }
+    var semRede = function (texto) { return { ok: false, rede: true, msg: texto || ((deps.online && deps.online() === false) ? 'Para entrar é preciso rede. Verifica a ligação e tenta outra vez.' : 'Não consegui falar com o servidor (rede fraca ou página sem autorização). Tenta outra vez.') }; };
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var opcoes = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: String(username || '').trim(), password: String(password || '') }) };
+    if (ctl) opcoes.signal = ctl.signal;
+    var tPrazo = null, estourou = false;
+    var prazo = new Promise(function (resolver) {
+      tPrazo = setTimeout(function () { estourou = true; if (ctl) { try { ctl.abort(); } catch (e) { /* já acabou */ } } resolver(null); }, deps.msLogin || LIMITES.msLogin);
+    });
+    var pedido = (async function () { var res = await deps.fetch(deps.base + '/auth/login-movel', opcoes), j = null; try { j = await res.json(); } catch (e) { j = null; } return { res: res, j: j }; }());
+    var r;
+    try { r = await Promise.race([pedido, prazo]); } catch (e) { r = null; } finally { clearTimeout(tPrazo); }
+    pedido.catch(function () { /* abortado depois do prazo: já se respondeu */ });
+    if (estourou || !r) return semRede(estourou ? 'O servidor não respondeu a tempo (rede fraca?). Verifica a ligação e tenta outra vez.' : '');
+    var res = r.res, j = r.j;
     if (res.ok && j && j.data && j.data.token) return { ok: true, sessao: sessaoDeLogin(j.data) };
     var er = (j && j.error) || {};
     var ra = lerRetryAfter(res, er);

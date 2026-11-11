@@ -7,13 +7,13 @@
    sempre: ao tocar (ou ao reabrir a página com todas as janelas fechadas) a versão nova assume e a velha apaga-se.
    Nunca guarda pedidos à API nem ao Storage (outra origem: nem sequer os intercepta) e nunca guarda uma resposta
    que não seja 200.
-   VERSAO = resumo dos 10 ficheiros acima (movel/versao.js). Mudar um ficheiro da página SEM subir a versão faz o
+   VERSAO = resumo dos 13 ficheiros acima (movel/versao.js). Mudar um ficheiro da página SEM subir a versão faz o
    teste falhar: sem isso os telemóveis ficavam com a página velha. Sobe-se com: node movel/versao.js --escrever */
 'use strict';
-var VERSAO = '81ad64941a00';
+var VERSAO = '0f73742446fb';
 var PREFIXO = 'doe-movel-';
 var CACHE = PREFIXO + VERSAO;
-var FICHEIROS = ['./', 'index.html', 'app.js', 'logica.js', 'config.js', 'classificacao.js', 'icones.js', 'estilo.css', 'manifest.webmanifest', 'icone.svg', 'icone-180.png'];
+var FICHEIROS = ['./', 'index.html', 'app.js', 'logica.js', 'config.js', 'classificacao.js', 'icones.js', 'estilo.css', 'manifest.webmanifest', 'logo-doex.png', 'logo-doex-escuro.png', 'icone-180.png', 'icone-192.png', 'icone-512.png'];
 
 function urlDe(f) { return new URL(f, self.location.href).href; }
 function semPesquisa(u) { var x = new URL(u); x.search = ''; x.hash = ''; return x.href; }
@@ -39,7 +39,12 @@ self.addEventListener('activate', function (e) {
   }).then(function () { return self.clients.claim(); }));
 });
 
-self.addEventListener('message', function (e) { if (e.data === 'ativar') self.skipWaiting(); });
+// 'ativar': a versão nova assume (só quando a pessoa toca no aviso). 'versao': diz a VERSAO à página (o rodapé da
+// entrada mostra-a, para quem dá apoio saber que versão está instalada).
+self.addEventListener('message', function (e) {
+  if (e.data === 'ativar') self.skipWaiting();
+  else if (e.data === 'versao' && e.source && typeof e.source.postMessage === 'function') e.source.postMessage({ versao: VERSAO });
+});
 
 self.addEventListener('fetch', function (e) {
   var req = e.request;

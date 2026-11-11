@@ -14,7 +14,7 @@
   if (self.DOE_MOVEL_CLASSIF) M.definirClassificacao(self.DOE_MOVEL_CLASSIF);   // listas geradas a partir da app (classificacao.js)
   var IC = self.DOE_MOVEL_ICONES || { ui: {}, produto: {} };
   var API = (self.DOE_MOVEL_CONFIG && self.DOE_MOVEL_CONFIG.api) || '';
-  var LS_SESSAO = 'doeMovel.sessao', LS_OBRA = 'doeMovel.obra';
+  var LS_SESSAO = 'doeMovel.sessao', LS_OBRA = 'doeMovel.obra', LS_DICA = 'doeMovel.dicaEcraFechada';   // a dica do ecrã inicial lembra-se do fecho
   var LIMITE_AVISO_TEXTO = 3600;     // o contador só aparece perto do limite (4 000)
   var MS_FECHAR_ESCOLHA = 220;       // a folha das opções fecha-se sozinha, depois de se ver a escolha
 
@@ -143,11 +143,11 @@
     if (resto) alvo.appendChild(document.createTextNode(resto));
   }
   function primeiraFrase(t) { var s = String(t || ''), i = s.indexOf('. '); return i > 0 ? [s.slice(0, i + 1), s.slice(i + 1)] : [s, '']; }
-  function mostrarErro(id, texto) {
+  function mostrarErro(id, texto, tipo, nomeIc) {
     var e = $(id); if (!e) return;
-    e.textContent = '';
+    e.textContent = ''; e.className = 'mv-erro' + (tipo ? ' ' + tipo : '');
     if (!texto) { e.hidden = true; return; }
-    e.appendChild(icone('alerta')); e.appendChild(el('span', null, texto)); e.hidden = false;
+    e.appendChild(icone(nomeIc || 'alerta')); e.appendChild(el('span', null, texto)); e.hidden = false;
   }
   function semMovimento() { try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } }
   function focar(alvo) { if (alvo && alvo.isConnected && !alvo.closest('[inert],[hidden]')) { try { alvo.focus({ preventScroll: true }); } catch (e) { alvo.focus(); } } }
@@ -166,7 +166,13 @@
     f.hidden = false;
     if (o.tipo === 'pos') faixa.t = setTimeout(function () { faixa(''); desenharFaixaFila(); }, 8000);
   }
-  function desenharFaixaRede() { $('faixa-rede').hidden = navigator.onLine !== false; }
+  // Na entrada a faixa só informa: o navigator.onLine dá falsos «sem rede» nas web apps do iPhone, por isso o «Entrar»
+  // tenta sempre; se o pedido falhar, o aviso de rede aparece por baixo dos campos.
+  function desenharFaixaRede() {
+    var sem = navigator.onLine === false, f = $('faixa-rede'), t = f.querySelector('.mv-faixa-t');
+    f.hidden = !sem;
+    if (t) { t.textContent = ''; if (est.vista === 'v-login') textoEm(t, 'Parece que não tens rede.', ' Para entrar é preciso; podes tentar na mesma.'); else textoEm(t, 'Sem rede.', ' Regista na mesma: fica no telemóvel e envia-se quando houver rede.'); }
+  }
   function desenharAlheios() {
     var box = $('alheios'); if (!box) return;
     box.textContent = '';
@@ -187,6 +193,8 @@
     var mudou = est.vista !== vista;
     est.vista = vista;
     ['v-login', 'v-registo', 'v-envio'].forEach(function (v) { $(v).hidden = v !== vista; });
+    document.documentElement.classList.toggle('mv-em-login', vista === 'v-login');
+    if (mudou) { desenharFaixaRede(); desenharDica(); }
     $('cab').hidden = vista === 'v-login';
     $('prog').hidden = vista !== 'v-registo';
     $('barra').hidden = vista === 'v-login';
@@ -235,11 +243,10 @@
       substituir: async function (antigo, r) { await apagar(antigo); await guardar(r); },
     };
   }
-  var NOTA_LOGIN = 'Entra com a tua conta do DOE. É só uma vez: a sessão fica 10 dias neste telemóvel.';
-  function desenharNotaLogin(nota) {
+  function desenharNotaLogin(nota) {   // a entrada não tem texto de apresentação (decisão do Pedro, 11 nov 2026): a nota só aparece quando diz algo
     var n = $('login-nota'); n.textContent = '';
-    if (!nota) { n.className = 'mv-lead'; n.removeAttribute('role'); n.textContent = NOTA_LOGIN; return; }
-    n.className = 'mv-faixa ama'; n.setAttribute('role', 'status');
+    if (!nota) { n.hidden = true; n.removeAttribute('role'); return; }
+    n.hidden = false; n.className = 'mv-faixa ama'; n.setAttribute('role', 'status');
     n.appendChild(icone(/expirou/i.test(nota) ? 'relogio' : 'alerta'));
     var t = el('span', 'mv-faixa-t'), p = primeiraFrase(mensagemHonesta(nota)); textoEm(t, p[0], p[1]); n.appendChild(t);
   }
@@ -249,7 +256,7 @@
     est.avisoNotaLogin = nota || '';
     desenharNotaLogin(nota);
     mostrarErro('login-erro', '');
-    $('l-pass').value = ''; $('l-pass').type = 'password'; $('l-ver').setAttribute('aria-pressed', 'false');
+    $('l-pass').value = ''; $('l-pass').type = 'password'; $('l-ver').setAttribute('aria-pressed', 'false'); $('l-ver').textContent = ''; $('l-ver').appendChild(icone('olho'));
     ir('v-login');
   }
   function sair() {
@@ -351,8 +358,7 @@
     $('q-obra').value = '';
     $('fo-pesq').hidden = obrasDaSessao().length <= 5;
     desenharListaObras();
-    var marcada = $('lista-obras').querySelector('[aria-pressed="true"]');
-    abrirFolha($('folha-obra'), marcada || (!$('fo-pesq').hidden ? $('q-obra') : $('lista-obras').querySelector('.mv-lo')));
+    abrirFolha($('folha-obra'), $('fo-t'));   // o título: num ecrã táctil o anel numa linha parecia uma escolha (e o teclado não abre sozinho)
   }
   function escolherObraDaFolha(id) {
     est.rasc.projectId = id; est.rasc.obraEscolhida = true; est.obraOrigem = id === lsLer(LS_OBRA) ? 'memoria' : 'escolhida';   // escolhida à mão: o rascunho guarda-se mesmo sem texto
@@ -446,7 +452,7 @@
     $('fp-nao').textContent = 'Não sei, fica só «' + p + '»';
     desenharOpcoes();
     var box = $('c-defeitos');
-    abrirFolha($('folha-prod'), box.querySelector('[aria-checked="true"]') || box.querySelector('.mv-op'), function () { return resumoDe(p); });
+    abrirFolha($('folha-prod'), $('fp-t'), function () { return resumoDe(p); });   // o título, não a 1.ª opção (o anel parecia uma escolha); Tab leva à opção marcada
   }
   function desenharOpcoes() {
     var box = $('c-defeitos'), p = folhaProd; box.textContent = '';
@@ -532,7 +538,7 @@
     $('fc-ini').textContent = M.iniciais(s.nome) || '·';
     $('fc-nome').textContent = s.nome || 'A tua conta';
     $('fc-sessao').textContent = sessaoValida() ? 'Sessão neste telemóvel até ' + M.textoDia(s.expiraEm) : 'A sessão expirou: ao enviar, entra outra vez';
-    abrirFolha($('folha-conta'), $('folha-conta').querySelector('[data-fechar]'));
+    abrirFolha($('folha-conta'), $('fc-t'));
   }
 
   // ── Fotos: compressão no telemóvel (o canvas retira o EXIF/GPS) ──
@@ -677,8 +683,11 @@
       var aberto = campoComFoco() && (tapado > 80 || (alturaMax - (window.innerHeight || 0)) > 120);
       raiz.style.setProperty('--mv-tecl', (aberto ? tapado : 0) + 'px');
       raiz.classList.toggle('mv-teclado', aberto);
+      // iPhone: o teclado tapa a página (o visualViewport encolhe) e a barra do iOS (↑ ↓ ✓) fica por cima da barra fixa:
+      // enquanto escreve a barra esconde-se e volta ao fechar o teclado. Android (a página encolhe) e computador: fica.
+      raiz.classList.toggle('mv-teclado-tapa', aberto && tapado > 80);
       medirBarra();
-      if (aberto) garantirCampoVisivel(vv);
+      if (aberto) { garantirCampoVisivel(vv); garantirEntrarVisivel(vv); }
     };
     var depois = function () { clearTimeout(tAj); tAj = setTimeout(ajustar, 60); };
     if (vv) { vv.addEventListener('resize', ajustar); vv.addEventListener('scroll', ajustar); }
@@ -925,12 +934,29 @@
   }
 
   // ── Arranque ──
+  var entrando = false;
+  function aEntrar(sim) {
+    entrando = sim;
+    var b = $('l-ok'); b.disabled = sim; b.textContent = sim ? 'A entrar…' : 'Entrar'; b.classList.toggle('ocupado', sim);
+    if (sim) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
+    ['l-user', 'l-pass'].forEach(function (id) { $(id).readOnly = sim; });
+  }
+  // Os erros que não são de quem escreve (a conta, o limite de tentativas, a rede) vão a âmbar, com o seu ícone.
+  function tipoErroLogin(r) {
+    if (r.rede) return ['ama', 'semrede'];
+    if (r.codigo === 'SEM_PERFIL' || r.codigo === 'PAPEL_SEM_ESCRITA' || r.codigo === 'CONTA_INACTIVA') return ['ama', 'pessoa'];
+    if (r.codigo === 'DEMASIADOS_PEDIDOS') return ['ama', 'relogio'];
+    return ['', 'alerta'];
+  }
   async function entrarComForm() {
+    if (entrando) return;
     var u = $('l-user').value, p = $('l-pass').value;
-    mostrarErro('login-erro', ''); $('l-ok').disabled = true;
-    var r = await M.login(deps(), u, p);
-    $('l-ok').disabled = false; $('l-pass').value = '';
-    if (!r.ok) { mostrarErro('login-erro', r.msg); return; }
+    mostrarErro('login-erro', '');
+    aEntrar(true);
+    var r;
+    try { r = await M.login(deps(), u, p); } finally { aEntrar(false); }
+    $('l-pass').value = '';
+    if (!r.ok) { var tp = tipoErroLogin(r); mostrarErro('login-erro', r.msg, tp[0], tp[1]); return; }
     est.sessao = r.sessao;
     lsGravar(LS_SESSAO, JSON.stringify(r.sessao));     // só token, validade, conta, nome e obras; nunca a palavra-passe
     faixa('');
@@ -945,6 +971,34 @@
     var i = $('l-pass'), b = $('l-ver'), ver = i.type === 'password';
     i.type = ver ? 'text' : 'password';
     b.setAttribute('aria-pressed', ver ? 'true' : 'false');   // o rótulo fica «Mostrar a palavra-passe»: o estado diz-o o aria-pressed
+    b.textContent = ''; b.appendChild(icone(ver ? 'olhoNao' : 'olho'));   // à vista: o olho riscado
+  }
+  // «Põe no ecrã inicial»: só no browser (nunca na app já instalada), fechável com um toque, lembra-se do fecho.
+  // Os passos do sistema certo (iPhone ou Android); sem saber qual, os dois.
+  var dicaFechada = false;   // o fecho vale nesta sessão mesmo que o localStorage falhe (modo privado, cheio)
+  // Browsers dentro de outras apps (WhatsApp, Teams, Instagram, Facebook, Outlook, LinkedIn; e o WebView do Android) não
+  // põem nada no ecrã inicial. Só se reconhecem os que o dizem no user agent; os outros (ex.: o WhatsApp do iPhone, igual
+  // ao Safari) ficam com os passos normais.
+  function browserEmbutido() { return /FBAN|FBAV|FB_IAB|FBIOS|Instagram|WhatsApp|Teams\/|MicrosoftTeams|Outlook|LinkedInApp|; wv\)/.test(String(navigator.userAgent || '')); }
+  function instalada() {
+    try { if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true; } catch (e) { /* sem matchMedia */ }
+    return navigator.standalone === true;
+  }
+  function desenharDica() {
+    var d = $('dica-ecra'); if (!d) return;
+    d.hidden = est.vista !== 'v-login' || instalada() || dicaFechada || lsLer(LS_DICA) === '1';
+    var ua = String(navigator.userAgent || ''), ios = /iPhone|iPad|iPod/.test(ua), android = /Android/.test(ua), emb = browserEmbutido();
+    $('dica-iphone').hidden = emb || (android && !ios); $('dica-android').hidden = emb || (ios && !android);
+    var fora = $('dica-fora'); fora.hidden = !emb;
+    if (emb) fora.textContent = 'Daqui não dá: abre este link no ' + (ios ? 'Safari' : (android ? 'Chrome' : 'Safari ou no Chrome')) + '.';
+  }
+  // O foco vai para o título (só para o leitor de ecrã), nunca para um campo: no iPhone isso abria o teclado.
+  function fecharDica() { dicaFechada = true; lsGravar(LS_DICA, '1'); desenharDica(); focar($('t-login')); }
+  // Na entrada, com o teclado aberto, o «Entrar» fica à vista por cima dele (a página rola; nada muda de tamanho).
+  function garantirEntrarVisivel(vv) {
+    var b = $('l-ok'); if (!b || est.vista !== 'v-login') return;
+    var r = b.getBoundingClientRect(), fundo = (vv ? vv.offsetTop + vv.height : window.innerHeight) - 12;
+    if (r.bottom > fundo) window.scrollBy(0, r.bottom - fundo);
   }
   async function iniciar() {
     try { if (history.state && history.state.mvFolha) history.replaceState(null, ''); } catch (e) { /* sem histórico */ }   // recarregou com uma folha aberta
@@ -997,6 +1051,7 @@
     $('b-enviar').addEventListener('click', aoEnviar);
     $('f-login').addEventListener('submit', function (ev) { ev.preventDefault(); entrarComForm(); });
     $('l-ver').addEventListener('click', verPalavraPasse);
+    $('dica-fechar').addEventListener('click', fecharDica);
     $('conta').addEventListener('click', abrirConta);
     $('sair').addEventListener('click', sair);
     $('e-nova').addEventListener('click', novaOcorrencia);
@@ -1036,7 +1091,14 @@
       $('nova-versao-esperar').onclick = function () { avisoNovaVersao(0); };
       $('nova-versao-mesmo').onclick = function () { avisoNovaVersao(0); ativar(reg); };
     };
-    nav.addEventListener('controllerchange', function () { if (est.recarregar) location.reload(); });
+    // a versão da página no rodapé da entrada (para quem dá apoio): pergunta-se ao service worker que está a servir
+    var pedirVersao = function () { try { if (nav.controller) nav.controller.postMessage('versao'); } catch (e) { /* sem resposta: fica «DOE Facade» */ } };
+    nav.addEventListener('message', function (ev) {
+      var v = ev && ev.data && ev.data.versao;
+      if (typeof v === 'string' && /^[0-9a-f]{6,}$/.test(v)) { var p = $('versao-pag'); p.textContent = 'DOE Facade · versão da página '; p.appendChild(el('code', null, v.slice(0, 8))); }
+    });
+    nav.addEventListener('controllerchange', function () { if (est.recarregar) location.reload(); else pedirVersao(); });
+    pedirVersao();
     nav.register('sw.js').then(function (reg) {
       if (reg.waiting && nav.controller) avisar(reg);
       reg.addEventListener('updatefound', function () {

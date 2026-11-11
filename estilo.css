@@ -31,6 +31,7 @@
   --mv-ic: 24px; --mv-ic-g: 32px; --mv-ic-xg: 40px; --mv-ic-p: 20px; --mv-ic-n: 18px; --mv-ic-pp: 16px; --mv-ic-xp: 14px;
   --mv-av: 36px; --mv-ok: 20px; --mv-x: 28px; --mv-radio: 24px; --mv-mini: 56px; --mv-selo: 72px; --mv-mini-r: 32px;
   --mv-prog-h: 3px; --mv-pb-h: 4px; --mv-pega-w: 36px; --mv-pega-h: 5px; --mv-fio: 3px; --mv-cod-w: 64px;
+  --mv-logo: 40px;        /* altura do logótipo DOEX na entrada: 154 × 40 (o PNG de 560 px fica nítido até 3x, ≤ 186 px de largura) */
   --mv-largura: 560px;    /* coluna máxima (tablet, telemóvel deitado) */
   --r-folha: 20px;        /* cantos de cima da folha que sobe do fundo */
   --mv-sobre-foto: rgba(10, 14, 16, .62); --mv-sobre-foto-t: #FFFFFF;   /* ✕ por cima de uma foto: igual nos dois temas */
@@ -274,6 +275,8 @@ h1, h2, p { margin: 0; }
 html.mv-teclado .mv-barra { padding-bottom: var(--e2); }
 html.mv-teclado #barra-nota { display: none; }
 html.mv-teclado #b-enviar { min-height: var(--mv-alvo); }
+/* iPhone com o teclado aberto: a barra do iOS (↑ ↓ ✓) e o teclado tapam o fundo; a barra esconde-se e volta ao fechar */
+html.mv-teclado-tapa #barra { display: none; }
 
 /* ── folha que sobe do fundo (<dialog>) ── */
 .mv-folha {
@@ -292,6 +295,7 @@ html.mv-com-folha { overflow: hidden; }   /* a página por baixo não rola com a
 .mv-pega { width: var(--mv-pega-w); height: var(--mv-pega-h); border-radius: var(--r-xs); background: var(--fileteF); margin: var(--e2) auto 0; flex: none; }
 .mv-folha-h { display: flex; align-items: center; gap: var(--e3); padding: var(--e2) var(--e2) var(--e3) var(--e4); flex: none; }
 .mv-folha-ht { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--mv-fino); }
+.mv-folha-h h2:focus { outline: none; }   /* o foco vai para o título ao abrir a folha (leitor de ecrã); não é um controlo */
 .mv-folha-h h2 { font-size: var(--mv-fs-tit); font-weight: 650; margin: 0; line-height: var(--mv-lh-cab); overflow-wrap: anywhere; }
 .mv-folha-h small { font-size: var(--mv-fs-sec); color: var(--t2); }
 .mv-icb { width: var(--mv-alvo); height: var(--mv-alvo); display: grid; place-items: center; border: 0; background: none; border-radius: 50%; color: var(--t2); flex: none; padding: 0; }
@@ -319,14 +323,32 @@ html.mv-com-folha { overflow: hidden; }   /* a página por baixo não rola com a
 .mv-conta-nota { font-size: var(--mv-fs-sec); color: var(--t2); margin: 0 0 var(--e4); }
 
 /* ── entrar ── */
-.mv-login { padding: var(--e7) var(--e2) var(--e6); }
-.mv-marca { width: var(--mv-alvo-g); height: var(--mv-alvo-g); border-radius: var(--r-xl); display: grid; place-items: center; background: var(--navy); color: var(--on-navy); font-size: var(--mv-fs-sec); font-weight: 650; letter-spacing: var(--mv-ls-marca); margin-bottom: var(--e5); }
+/* entrada: calma e centrada (variante B do protótipo), só a marca, os campos, «Entrar» e o rodapé com a versão */
+.mv-login { display: flex; flex-direction: column; min-height: calc(100dvh - var(--e2) - var(--e5) - var(--mv-sa-bot)); padding: calc(var(--e8) + var(--mv-sa-top)) var(--e2) 0; }   /* sem cabeçalho: a zona segura de cima (relógio) entra aqui */
+.mv-ent-topo { display: flex; flex-direction: column; align-items: center; margin-bottom: var(--e7); }
+.mv-ent-logo { display: block; height: var(--mv-logo); width: auto; max-width: 100%; }
+.mv-so-leitor { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.mv-ent-dica { margin: var(--e6) 0 0; align-items: flex-start; }
+.mv-ent-dica .mv-icb { margin: calc(-1 * var(--e2)) calc(-1 * var(--e1)) 0 0; }
+.mv-ent-passos { display: flex; flex-direction: column; gap: var(--e1); margin-top: var(--e2); color: var(--t2); }
+.mv-ent-passos > span { display: block; }
+.mv-ent-passos b { color: var(--tinta); font-weight: 600; }
+.mv-ent-passos .mv-ic { display: inline-block; width: var(--mv-ic-pp); height: var(--mv-ic-pp); color: var(--tinta); vertical-align: middle; margin: 0 var(--e1); }
+.mv-ent-rod { margin-top: auto; padding: var(--e7) 0 var(--e2); font-size: var(--mv-fs-leg); color: var(--t3); text-align: center; font-variant-numeric: tabular-nums; }
+.mv-ent-rod code { font-family: var(--f-mono); }
+html.mv-em-login .mv-corpo { padding-bottom: calc(var(--e5) + var(--mv-sa-bot) + var(--mv-tecl)); }
+.mv-erro.ama { background: var(--amaF); color: var(--ama); }
+.mv-pass .mv-icb[aria-pressed="true"] { color: var(--navy); }
+.mv-btn.pri.ocupado { opacity: var(--mv-op-ocupado); cursor: default; }
+.mv-in[readonly] { color: var(--t2); }
 .mv-rot { display: block; font-size: var(--mv-fs-sec); font-weight: 600; color: var(--t2); margin: var(--e5) 0 var(--e2); }
 .mv-pass { position: relative; }
 .mv-pass .mv-in { padding-right: var(--e8); }
 .mv-pass .mv-icb { position: absolute; right: var(--e1); top: 50%; margin-top: calc(var(--mv-alvo) / -2); }
 .mv-login .mv-btn { margin-top: var(--e6); }
 .mv-login .mv-faixa { margin: 0 0 var(--e2); }
+.mv-login .mv-ent-topo + .mv-faixa { margin-top: calc(-1 * var(--e5)); }
+.mv-login .mv-ent-dica { margin: var(--e6) 0 0; }
 
 /* ── envio, recebida, guardada ── */
 .mv-env { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: var(--e6); }

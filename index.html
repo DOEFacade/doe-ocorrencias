@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>DOE · Registar ocorrência</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="icon" href="icone-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icone-180.png">
 <link rel="stylesheet" href="estilo.css">
 </head>
@@ -35,11 +35,14 @@
     <div id="faixa" class="mv-faixa ama" role="status" aria-live="polite" hidden></div>
     <div id="alheios" aria-live="polite" hidden></div>
 
-    <!-- Entrar -->
+    <!-- Entrar (variante B do protótipo da entrada, validada a 11 nov 2026, sem texto de apresentação): o logótipo DOEX
+         oficial centrado, os dois campos, «Entrar», os estados e o rodapé com a versão da página -->
     <section id="v-login" class="mv-login" hidden aria-labelledby="t-login">
-      <div class="mv-marca" aria-hidden="true">DOE</div>
-      <h1 id="t-login" class="mv-h1">Ocorrências em obra</h1>
-      <div id="login-nota" class="mv-lead"></div>
+      <div class="mv-ent-topo">
+        <picture><source srcset="logo-doex-escuro.png" media="(prefers-color-scheme: dark)"><img class="mv-ent-logo" id="logo" src="logo-doex.png" alt="DOEX" width="154" height="40"></picture>
+        <h1 id="t-login" class="mv-so-leitor" tabindex="-1">Entrar · Ocorrências em obra</h1>
+      </div>
+      <div id="login-nota" hidden></div>
       <form id="f-login" autocomplete="on" novalidate>
         <label class="mv-rot" for="l-user">Utilizador</label>
         <input class="mv-in" type="text" id="l-user" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="next" required>
@@ -51,9 +54,11 @@
         <p class="mv-erro" id="login-erro" role="alert" hidden></p>
         <button type="submit" class="mv-btn pri" id="l-ok">Entrar</button>
       </form>
+      <div id="dica-ecra" class="mv-faixa neu mv-ent-dica" role="note" hidden><span class="mv-faixa-ic" data-ic="tel"></span><span class="mv-faixa-t"><b>Põe no ecrã inicial.</b><span class="mv-ent-passos"><span id="dica-iphone"><b>iPhone:</b> Toca em ⋯ (ou Partilhar<span data-ic="partilhar"></span>) › Partilhar › Adicionar ao ecrã principal</span><span id="dica-android"><b>Android:</b> Menu<span data-ic="menu"></span>› Instalar aplicação (ou Adicionar ao ecrã principal)</span><span id="dica-fora" hidden></span></span></span><button type="button" class="mv-icb" id="dica-fechar" aria-label="Fechar a dica"><span data-ic="x"></span></button></div>
+      <p class="mv-ent-rod" id="versao-pag">DOE Facade</p>
     </section>
 
-    <!-- Registar: obra, o que aconteceu (opcional), descrição, fotos -->
+    <!-- Registar: obra, o que aconteceu (nunca obrigatório: sem rótulo, decisão do Pedro a 11 nov 2026), descrição, fotos -->
     <section id="v-registo" hidden aria-label="Registar ocorrência">
       <section class="mv-sec" id="sec-obra" aria-labelledby="h-obra">
         <div class="mv-sec-h"><h2 id="h-obra">Obra</h2></div>
@@ -62,7 +67,7 @@
       </section>
 
       <section class="mv-sec" id="classif" aria-labelledby="h-tipo" hidden>
-        <div class="mv-sec-h"><h2 id="h-tipo">O que aconteceu?</h2><span class="mv-sec-m">Opcional</span></div>
+        <div class="mv-sec-h"><h2 id="h-tipo">O que aconteceu?</h2></div>
         <div id="c-resumo"></div>
         <div class="mv-grade" id="c-produtos" role="group" aria-labelledby="h-tipo"></div>
         <button type="button" class="mv-link" id="c-outro" hidden><span data-ic="mais"></span>Outro produto</button>
@@ -120,7 +125,7 @@
 <dialog class="mv-folha alta" id="folha-obra" aria-labelledby="fo-t">
   <div class="mv-folha-in">
     <div class="mv-pega" aria-hidden="true"></div>
-    <div class="mv-folha-h"><span class="mv-folha-ht"><h2 id="fo-t">Escolher a obra</h2></span><button type="button" class="mv-icb" data-fechar aria-label="Fechar"><span data-ic="x"></span></button></div>
+    <div class="mv-folha-h"><span class="mv-folha-ht"><h2 id="fo-t" tabindex="-1">Escolher a obra</h2></span><button type="button" class="mv-icb" data-fechar aria-label="Fechar"><span data-ic="x"></span></button></div>
     <div class="mv-folha-c">
       <div class="mv-pesq" id="fo-pesq"><span data-ic="proc"></span><input class="mv-in" id="q-obra" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Procurar obra ou código" aria-label="Procurar obra ou código"></div>
       <div id="lista-obras"></div>
@@ -130,7 +135,7 @@
 <dialog class="mv-folha" id="folha-prod" aria-labelledby="fp-t">
   <div class="mv-folha-in">
     <div class="mv-pega" aria-hidden="true"></div>
-    <div class="mv-folha-h"><span class="mv-res-ic" id="fp-ic"></span><span class="mv-folha-ht"><h2 id="fp-t"></h2><small>O que aconteceu?</small></span><button type="button" class="mv-icb" data-fechar aria-label="Fechar"><span data-ic="x"></span></button></div>
+    <div class="mv-folha-h"><span class="mv-res-ic" id="fp-ic"></span><span class="mv-folha-ht"><h2 id="fp-t" tabindex="-1"></h2><small>O que aconteceu?</small></span><button type="button" class="mv-icb" data-fechar aria-label="Fechar"><span data-ic="x"></span></button></div>
     <div class="mv-folha-c" id="c-defeitos" role="radiogroup" aria-labelledby="fp-t"></div>
     <div class="mv-folha-p"><button type="button" class="mv-btn ghost" id="fp-nao"></button></div>
   </div>
@@ -138,7 +143,7 @@
 <dialog class="mv-folha" id="folha-conta" aria-labelledby="fc-t">
   <div class="mv-folha-in">
     <div class="mv-pega" aria-hidden="true"></div>
-    <div class="mv-folha-h"><span class="mv-folha-ht"><h2 id="fc-t">Conta</h2></span><button type="button" class="mv-icb" data-fechar aria-label="Fechar"><span data-ic="x"></span></button></div>
+    <div class="mv-folha-h"><span class="mv-folha-ht"><h2 id="fc-t" tabindex="-1">Conta</h2></span><button type="button" class="mv-icb" data-fechar aria-label="Fechar"><span data-ic="x"></span></button></div>
     <div class="mv-folha-c">
       <div class="mv-conta"><span class="mv-av-g" id="fc-ini" aria-hidden="true"></span><span><b id="fc-nome"></b><small id="fc-sessao"></small></span></div>
       <p class="mv-conta-nota">Ao sair, o que ficou por enviar continua guardado neste telemóvel, na tua conta.</p>
