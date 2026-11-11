@@ -7,13 +7,13 @@
    sempre: ao tocar (ou ao reabrir a página com todas as janelas fechadas) a versão nova assume e a velha apaga-se.
    Nunca guarda pedidos à API nem ao Storage (outra origem: nem sequer os intercepta) e nunca guarda uma resposta
    que não seja 200.
-   VERSAO = resumo dos 9 ficheiros acima (movel/versao.js). Mudar um ficheiro da página SEM subir a versão faz o
+   VERSAO = resumo dos 10 ficheiros acima (movel/versao.js). Mudar um ficheiro da página SEM subir a versão faz o
    teste falhar: sem isso os telemóveis ficavam com a página velha. Sobe-se com: node movel/versao.js --escrever */
 'use strict';
-var VERSAO = 'c99d14abb646';
+var VERSAO = '81ad64941a00';
 var PREFIXO = 'doe-movel-';
 var CACHE = PREFIXO + VERSAO;
-var FICHEIROS = ['./', 'index.html', 'app.js', 'logica.js', 'config.js', 'classificacao.js', 'estilo.css', 'manifest.webmanifest', 'icone.svg', 'icone-180.png'];
+var FICHEIROS = ['./', 'index.html', 'app.js', 'logica.js', 'config.js', 'classificacao.js', 'icones.js', 'estilo.css', 'manifest.webmanifest', 'icone.svg', 'icone-180.png'];
 
 function urlDe(f) { return new URL(f, self.location.href).href; }
 function semPesquisa(u) { var x = new URL(u); x.search = ''; x.hash = ''; return x.href; }

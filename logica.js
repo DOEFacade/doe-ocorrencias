@@ -20,6 +20,7 @@
     maxBytes: 1024 * 1024,   // acima disto, depois de comprimir, recusa-se
     servidorBytes: 5 * 1024 * 1024,
     margemTokenMs: 60 * 1000,
+    msPrepararFoto: 15 * 1000,   // uma foto «A preparar» que demore mais do que isto falha (e desbloqueia o envio)
   };
   var ESPERAS_MS = [2000, 10000, 60000];   // 2 s, 10 s, 1 min; depois só quando voltar a rede
   var PASSOS_COMPRESSAO = [
@@ -207,7 +208,37 @@
     r.tipoProduto = CLASSIF ? CLASSIF.produtos.filter(function (p) { return l.indexOf(p) >= 0; }) : l;
     return r;
   }
+  function ordenarProdutos(l) { return CLASSIF ? CLASSIF.produtos.filter(function (p) { return l.indexOf(p) >= 0; }) : l; }
+  /** Tocar numa caixa de produto (10 nov 2026): fica ESTE produto. Substitui os outros (e o «o que aconteceu» deles);
+      se já estava escolhido, mantém o que se tinha escolhido para ele. */
+  function escolherProduto(r, produto) {
+    if (CLASSIF && CLASSIF.produtos.indexOf(produto) < 0) return r;
+    var c = classificacaoDe(r), def = {};
+    if (Object.prototype.hasOwnProperty.call(c.defeitos, produto)) def[produto] = c.defeitos[produto];
+    r.tipoProduto = [produto]; r.defeitos = def;
+    return r;
+  }
+  /** «+ Outro produto»: junta este aos que já estão (nunca tira nenhum), pela ordem da lista da app. */
+  function juntarProduto(r, produto) {
+    if (CLASSIF && CLASSIF.produtos.indexOf(produto) < 0) return r;
+    var c = classificacaoDe(r);
+    if (c.tipoProduto.indexOf(produto) < 0) c.tipoProduto.push(produto);
+    r.tipoProduto = ordenarProdutos(c.tipoProduto); r.defeitos = c.defeitos;
+    return r;
+  }
+  /** O ✕ do resumo: tira o produto e o «o que aconteceu» dele. */
+  function tirarProduto(r, produto) {
+    var c = classificacaoDe(r);
+    r.tipoProduto = c.tipoProduto.filter(function (p) { return p !== produto; });
+    delete c.defeitos[produto]; r.defeitos = c.defeitos;
+    return r;
+  }
   /** Escolhe «o que aconteceu» de um produto já escolhido; tocar na mesma opção outra vez desfaz (é opcional). */
+  /** «Não sei, fica só <Produto>»: fica o produto e sai o «o que aconteceu» dele. */
+  function semDefeito(r, produto) {
+    if (r && r.defeitos && typeof r.defeitos === 'object' && Object.prototype.hasOwnProperty.call(r.defeitos, produto)) delete r.defeitos[produto];
+    return r;
+  }
   function escolherDefeito(r, produto, chave) {
     if ((r.tipoProduto || []).indexOf(produto) < 0) return r;
     if (CLASSIF && !defeitosDe(produto).some(function (x) { return x.key === chave; })) return r;
@@ -228,7 +259,9 @@
   function novoRascunho(o) {
     return { id: o.id, projectId: o.projectId || '', texto: '', capturadoEm: '', fotos: [], estado: 'rascunho', numero: '', criadoEm: o.agora || '', contaId: o.contaId || '', contaNome: o.contaNome || '', tipoProduto: [], defeitos: {} };
   }
-  function rascunhoVazio(r) { return !String(r.texto || '').trim() && !(r.fotos || []).length; }
+  /** Vazio = nada que a pessoa tenha feito: sem texto, sem fotos, sem produto escolhido e sem obra escolhida à mão
+      (a obra que vem da memória, do link ou por ser a única não conta: o formulário novo já a traz). */
+  function rascunhoVazio(r) { return !String(r.texto || '').trim() && !(r.fotos || []).length && !(Array.isArray(r.tipoProduto) && r.tipoProduto.length) && !r.obraEscolhida; }
   function marcarCaptura(r, agora) { if (!r.capturadoEm) r.capturadoEm = (agora instanceof Date ? agora : new Date()).toISOString(); return r; }
   function podeEnviar(r) {
     if (!r.projectId) return { ok: false, campo: 'obra', motivo: 'Escolhe a obra.' };
@@ -239,6 +272,46 @@
     return { ok: true };
   }
   function podeAcrescentarFoto(r) { return (r.fotos || []).length < LIMITES.fotos; }
+  /** O que diz a barra do fundo (10 nov 2026): o que falta para enviar, ou null se está pronto. Pela ordem do ecrã:
+      a obra, a foto a preparar (o envio espera por ela), o texto. Não muda a regra: é a do podeEnviar (e o servidor
+      volta a exigir a descrição). `aPreparar`: quantas fotos ainda estão a ser comprimidas. */
+  function faltaParaEnviar(r, aPreparar) {
+    var p = podeEnviar(r);
+    if (!p.ok && p.campo === 'obra') return { campo: 'obra', texto: 'Falta escolher a obra' };
+    if (aPreparar > 0) return { campo: 'fotos', texto: 'A preparar a foto…', espera: true };
+    if (p.ok) return null;
+    if (p.campo === 'texto' && !String(r.texto || '').trim()) return { campo: 'texto', texto: 'Falta escrever o que se passa' };
+    return { campo: p.campo, texto: p.motivo.replace(/\.$/, '') };
+  }
+  /** As iniciais do círculo da conta: «Rui Martins» → «RM», «Ana» → «A». */
+  function iniciais(nome) {
+    var p = String(nome || '').trim().split(/\s+/).filter(Boolean);
+    if (!p.length) return '';
+    return (p[0].charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase();
+  }
+  function semAcentos(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+  /** A pesquisa da folha das obras: pelo código e pelo nome, sem ligar a maiúsculas nem a acentos («marques» acha «Marquês»). */
+  function filtrarObras(obras, q) {
+    var t = semAcentos(q).trim();
+    if (!t) return (obras || []).slice();
+    var partes = t.split(/\s+/);
+    return (obras || []).filter(function (o) { var h = semAcentos(o.codigo + ' ' + o.nome); return partes.every(function (x) { return h.indexOf(x) >= 0; }); });
+  }
+  function dois(n) { return ('0' + n).slice(-2); }
+  /** «hoje às 11:41», «ontem às 18:02» ou «07/11 às 09:15» (hora local do telemóvel). */
+  function textoHora(iso, agora) {
+    var d = new Date(iso);
+    if (!iso || isNaN(d.getTime())) return '';
+    var a = agora instanceof Date ? agora : new Date();
+    var dia = function (x) { return x.getFullYear() * 10000 + (x.getMonth() + 1) * 100 + x.getDate(); };
+    var ontem = new Date(a.getFullYear(), a.getMonth(), a.getDate() - 1);
+    var h = dois(d.getHours()) + ':' + dois(d.getMinutes());
+    if (dia(d) === dia(a)) return 'hoje às ' + h;
+    if (dia(d) === dia(ontem)) return 'ontem às ' + h;
+    return dois(d.getDate()) + '/' + dois(d.getMonth() + 1) + ' às ' + h;
+  }
+  /** «20/11»: o dia em que a sessão acaba (hora local). */
+  function textoDia(iso) { var d = new Date(iso); return isNaN(d.getTime()) ? '' : dois(d.getDate()) + '/' + dois(d.getMonth() + 1); }
   /** Fecha o rascunho para envio: numera as fotos e fixa o que vai ao servidor (depois do texto enviado o servidor ignora alterações). */
   function congelar(r, agora) {
     marcarCaptura(r, agora);
@@ -293,7 +366,7 @@
       case 'DEMASIADOS_PEDIDOS': return { accao: 'repetir', texto: 'Demasiados pedidos seguidos. Espera ' + (e.retryAfter ? textoEspera(e.retryAfter) : 'um pouco') + '; tento outra vez.', retryAfter: e.retryAfter || 0 };
       case 'LIMITE_DIARIO': return { accao: 'parar', texto: 'Atingiste o limite de hoje. Fala com o gabinete.' };
       case 'DB_INDISPONIVEL': return { accao: 'repetir', texto: 'O servidor está ocupado. Guardada no telemóvel; tento outra vez.', retryAfter: e.retryAfter || 0 };
-      case 'OBRA_INVALIDA': return { accao: 'corrigir', relogin: true, texto: 'Essa obra já não está ativa. Entra outra vez para actualizar a lista de obras.' };
+      case 'OBRA_INVALIDA': return { accao: 'corrigir', relogin: true, texto: 'Essa obra já não está ativa. Entra outra vez para atualizar a lista de obras.' };
       case 'ID_EM_USO': return { accao: 'novo-id', texto: 'Identificador repetido; gero outro.' };
       case 'ID_INVALIDO': return { accao: 'parar', texto: 'Erro interno da página (identificador). Avisa o gabinete.' };
       case 'ID_ALHEIO': return { accao: 'parar', texto: 'Esta ocorrência foi iniciada por outra conta. Entra com essa conta para a terminar.' };
@@ -441,8 +514,10 @@
     validadeToken: validadeToken, sessaoDeLogin: sessaoDeLogin, escolherObra: escolherObra,
     tamanhoImagem: tamanhoImagem, decidirCompressao: decidirCompressao,
     definirClassificacao: definirClassificacao, classificacaoDisponivel: classificacaoDisponivel, defeitosDe: defeitosDe, classificacaoDe: classificacaoDe,
-    temClassificacao: temClassificacao, alternarProduto: alternarProduto, escolherDefeito: escolherDefeito, resumoClassificacao: resumoClassificacao,
+    temClassificacao: temClassificacao, alternarProduto: alternarProduto, escolherDefeito: escolherDefeito, semDefeito: semDefeito, resumoClassificacao: resumoClassificacao,
+    escolherProduto: escolherProduto, juntarProduto: juntarProduto, tirarProduto: tirarProduto,
     novoRascunho: novoRascunho, rascunhoVazio: rascunhoVazio, marcarCaptura: marcarCaptura, podeEnviar: podeEnviar,
+    faltaParaEnviar: faltaParaEnviar, iniciais: iniciais, filtrarObras: filtrarObras, textoHora: textoHora, textoDia: textoDia,
     podeAcrescentarFoto: podeAcrescentarFoto, congelar: congelar, reabrir: reabrir, corpoEntrada: corpoEntrada,
     contarFotos: contarFotos, textoEstado: textoEstado, mensagemErro: mensagemErro, esperaRetry: esperaRetry,
     chamar: chamar, processar: processar, login: login,
