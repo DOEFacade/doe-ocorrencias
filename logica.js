@@ -57,7 +57,13 @@
     var obras = Array.isArray(data && data.obras) ? data.obras.map(function (o) {
       return { id: String(o.id), codigo: String(o.codigo || ''), nome: String(o.nome || '') };
     }) : [];
-    return { token: String(data.token), expiraEm: String(data.expiraEm), contaId: String(data.contaId || contaDoToken(data.token)), nome: String(data.nome || ''), obras: obras };
+    var s = { token: String(data.token), expiraEm: String(data.expiraEm), contaId: String(data.contaId || contaDoToken(data.token)), nome: String(data.nome || ''), obras: obras };
+    // 12 nov 2026 (app do telemóvel, fatia 1): o que a página liga vem do servidor; um login antigo (sem a lista) só tem a ocorrência
+    if (Array.isArray(data && data.funcionalidades)) s.funcionalidades = data.funcionalidades.filter(function (f) { return typeof f === 'string' && /^[a-z-]{1,30}$/.test(f); });
+    if (data && data.soTelemovel === true) s.soTelemovel = true;
+    if (data && typeof data.ambito === 'string') s.ambito = data.ambito;
+    if (Number.isInteger(data && data.contrato)) s.contrato = data.contrato;   // a versão do contrato do servidor (ausente = 0, quem lê decide)
+    return s;
   }
   /** O `sub` do token (a conta). Só serve de etiqueta para prender a fila ao utilizador: quem decide é o servidor. */
   function contaDoToken(token) {
@@ -359,6 +365,9 @@
     if (e && e.rede) return { accao: 'repetir', rede: true, texto: e.online === false ? 'Sem rede. Guardada no telemóvel: envia-se quando houver rede (a página tem de estar aberta).' : 'Não consegui falar com o servidor (rede fraca ou página sem autorização). Guardada no telemóvel; tento outra vez.' };
     switch (c) {
       case 'INVALID_CREDENTIALS': return { accao: 'corrigir', texto: 'Utilizador ou palavra-passe errados.' };
+      case 'TOKEN_REVOGADO': return { accao: 'login', revogado: true, texto: 'Este telemóvel foi desligado (palavra-passe mudada ou «Desligar os meus telemóveis»). Entra outra vez; o que escreveste está guardado.' };
+      case 'PASSWORD_ALTERADA_ENTRA_DE_NOVO': return { accao: 'login', texto: m || 'A palavra-passe foi alterada; entra de novo.' };
+      case 'MOVEL_POR_INSTALAR': return { accao: 'repetir', texto: 'O serviço do telemóvel ainda está a ser preparado no servidor. Guardada no telemóvel; tento mais tarde.', retryAfter: e.retryAfter || 0 };
       case 'UNAUTHORIZED': return { accao: 'login', texto: d.motivo === 'expirado' ? 'A sessão expirou. Entra outra vez; o que escreveste está guardado.' : 'Entra outra vez; o que escreveste está guardado.' };
       case 'CONTA_INACTIVA': return { accao: 'login', texto: 'Esta conta está inativa. Fala com a administração.' };
       case 'TOKEN_DE_AMBITO': case 'TOKEN_SEM_ESCRITA': return { accao: 'login', texto: 'Entra outra vez para continuar; o que escreveste está guardado.' };
@@ -494,7 +503,7 @@
         }
         if (!t.ok) {
           r.bloqueio = m.texto;
-          return { estado: m.accao === 'corrigir' ? 'corrigir' : (m.accao === 'login' ? 'login' : (m.accao === 'parar' ? 'parar' : 'pendente')), accao: m.accao, mensagem: m.texto, rede: !!m.rede, relogin: !!m.relogin, campo: m.campo, retryAfter: m.retryAfter };
+          return { estado: m.accao === 'corrigir' ? 'corrigir' : (m.accao === 'login' ? 'login' : (m.accao === 'parar' ? 'parar' : 'pendente')), accao: m.accao, mensagem: m.texto, rede: !!m.rede, relogin: !!m.relogin, campo: m.campo, retryAfter: m.retryAfter, revogado: !!m.revogado };
         }
         prob = null;
       }
@@ -515,7 +524,7 @@
     }
     r.estado = 'a-enviar'; await deps.guardar(r);
     var p = prob || { accao: 'repetir', texto: 'Faltam fotos por enviar.' };
-    return { estado: p.accao === 'login' ? 'login' : (p.accao === 'parar' ? 'parar' : 'pendente'), accao: p.accao, mensagem: p.texto, rede: !!p.rede, retryAfter: p.retryAfter || 0 };
+    return { estado: p.accao === 'login' ? 'login' : (p.accao === 'parar' ? 'parar' : 'pendente'), accao: p.accao, mensagem: p.texto, rede: !!p.rede, retryAfter: p.retryAfter || 0, revogado: !!p.revogado };
   }
 
   return {

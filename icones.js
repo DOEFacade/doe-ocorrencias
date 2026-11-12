@@ -27,6 +27,17 @@ self.DOE_MOVEL_ICONES = {
     relogio: [['circle',{cx:'12',cy:'12',r:'8'}],['path',{d:'M12 8v4.2l2.6 2.6'}]],
     mais: [['path',{d:'M12 5.5v13M5.5 12h13'}]],
     sair: [['path',{d:'M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14'}],['path',{d:'M10 16l-4-4 4-4M6 12h10'}]],
+    // 12 nov 2026, a casca da app (protótipo DOEX-Telemovel-App-Prototipo.html): voltar, abrir, destinos, diário, conta
+    chevE: [['path',{d:'M15 6l-6 6 6 6'}]],
+    chevB: [['path',{d:'M6 9l6 6 6-6'}]],
+    menos: [['path',{d:'M5.5 12h13'}]],
+    casa: [['path',{d:'M4 10.5L12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z'}]],
+    lista: [['path',{d:'M10.5 6.5H20M10.5 12H20M10.5 17.5H20'}],['path',{d:'M3.8 6.6l1.4 1.4 2.4-2.6M3.8 12.1l1.4 1.4 2.4-2.6'}],['circle',{cx:'5.4',cy:'17.5',r:'1.4'}]],
+    diario: [['path',{d:'M6 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H6z'}],['path',{d:'M6 3.5v17M9.5 8.5h6M9.5 12h6M9.5 15.5h3.5'}]],
+    lixo: [['path',{d:'M5 7h14M10 7V4.5h4V7M7 7l1 12.5h8L17 7'}]],
+    desligar: [['path',{d:'M12 3.5v8'}],['path',{d:'M7.2 6.5a7 7 0 1 0 9.6 0'}]],
+    lapis: [['path',{d:'M14.5 5.5l4 4L9 19H5v-4z'}],['path',{d:'M12.5 7.5l4 4'}]],
+    chave: [['circle',{cx:'8',cy:'15.5',r:'4'}],['path',{d:'M10.9 12.6l8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2'}]],
   },
   produto: {
     'Vidro': [['rect',{x:'4.5',y:'3.5',width:'15',height:'17',rx:'1.5'}],['path',{d:'M8.5 10.5l4-4M8.5 15.5l7-7'}]],

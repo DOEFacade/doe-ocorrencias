@@ -9,9 +9,9 @@
 <meta name="theme-color" content="#0E1112" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Ocorrência">
+<meta name="apple-mobile-web-app-title" content="DOEX">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>DOE · Registar ocorrência</title>
+<title>DOEX</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icone-180.png">
@@ -22,6 +22,7 @@
      Tudo o que vem do servidor entra por textContent (app.js); os ícones são dados (icones.js), nunca HTML. -->
 <div id="app" class="mv-app">
   <header class="mv-cab" id="cab" hidden>
+    <button type="button" class="mv-volta" id="cab-volta" hidden><span data-ic="chevE"></span><span id="cab-volta-t">Hoje</span></button>
     <span class="mv-cab-t"><b id="cab-t">Nova ocorrência</b><small id="quem">DOE Facade</small></span>
     <button type="button" id="conta" class="mv-av" aria-label="Conta" hidden><span id="conta-ini" aria-hidden="true"></span></button>
   </header>
@@ -40,7 +41,7 @@
     <section id="v-login" class="mv-login" hidden aria-labelledby="t-login">
       <div class="mv-ent-topo">
         <picture><source srcset="logo-doex-escuro.png" media="(prefers-color-scheme: dark)"><img class="mv-ent-logo" id="logo" src="logo-doex.png" alt="DOEX" width="154" height="40"></picture>
-        <h1 id="t-login" class="mv-so-leitor" tabindex="-1">Entrar · Ocorrências em obra</h1>
+        <h1 id="t-login" class="mv-so-leitor" tabindex="-1">Entrar · DOEX</h1>
       </div>
       <div id="login-nota" hidden></div>
       <form id="f-login" autocomplete="on" novalidate>
@@ -90,6 +91,14 @@
       </section>
     </section>
 
+    <!-- A casca (casca.js, 12 nov 2026): Hoje, Diário de obra, diário guardado, Diário · 7 dias e Por enviar. Desenhadas por
+         JavaScript, sempre por textContent. -->
+    <section id="v-hoje" class="mv-hoje" hidden aria-labelledby="h-hola"></section>
+    <section id="v-diario" hidden aria-label="Diário de obra"></section>
+    <section id="v-dia-envio" class="mv-env" hidden aria-labelledby="de-titulo"></section>
+    <section id="v-diario7" hidden aria-label="Diário · 7 dias"></section>
+    <section id="v-fila" hidden aria-label="Por enviar"></section>
+
     <!-- Envio: a enviar, registada, recebida, guardada no telemóvel, não foi enviada -->
     <section id="v-envio" class="mv-env" hidden aria-labelledby="e-titulo">
       <div class="mv-selo" id="e-selo" role="img" aria-label=""></div>
@@ -117,8 +126,17 @@
       <button type="button" class="mv-btn" id="e-corrigir" hidden>Corrigir</button>
       <button type="button" class="mv-btn" id="e-retry" hidden><span data-ic="atual"></span>Tentar agora</button>
       <button type="button" class="mv-btn" id="e-nova">Nova ocorrência</button>
+      <button type="button" class="mv-btn ghost compacto" id="e-feito">Feito</button>
     </div>
+    <div class="mv-barra-in" id="barra-dia" hidden></div>
+    <div class="mv-barra-in mv-btns" id="barra-dia-env" hidden></div>
+    <div class="mv-barra-in" id="barra-d7" hidden></div>
   </footer>
+  <!-- A barra de destinos (Hoje · Tarefas · + · Pessoal · Conta): desenhada pela casca -->
+  <nav class="mv-nav cinco" id="nav" aria-label="Destinos" hidden></nav>
+  <div id="toast" class="mv-toast" role="status" aria-live="polite" hidden></div>
+  <input type="file" id="d-cam" accept="image/*" capture="environment" class="oculto" tabindex="-1" aria-hidden="true">
+  <input type="file" id="d-gal" accept="image/*" multiple class="oculto" tabindex="-1" aria-hidden="true">
 </div>
 
 <!-- Folhas que sobem do fundo: <dialog> com showModal (foco preso, Esc, o resto inerte); sem showModal, app.js faz o mesmo -->
@@ -145,17 +163,31 @@
     <div class="mv-pega" aria-hidden="true"></div>
     <div class="mv-folha-h"><span class="mv-folha-ht"><h2 id="fc-t" tabindex="-1">Conta</h2></span><button type="button" class="mv-icb" data-fechar aria-label="Fechar"><span data-ic="x"></span></button></div>
     <div class="mv-folha-c">
-      <div class="mv-conta"><span class="mv-av-g" id="fc-ini" aria-hidden="true"></span><span><b id="fc-nome"></b><small id="fc-sessao"></small></span></div>
+      <div class="mv-conta"><span class="mv-av-g" id="fc-ini" aria-hidden="true"></span><span><b id="fc-nome"></b><small id="fc-papel" hidden></small><small id="fc-sessao"></small></span></div>
+      <div id="fc-ops"></div>
       <p class="mv-conta-nota">Ao sair, o que ficou por enviar continua guardado neste telemóvel, na tua conta.</p>
     </div>
-    <div class="mv-folha-p"><button type="button" class="mv-btn" id="sair"><span data-ic="sair"></span>Sair</button></div>
+    <div class="mv-folha-p"><button type="button" class="mv-btn" id="sair"><span data-ic="sair"></span>Sair</button><p class="mv-conta-v" id="fc-versao"></p></div>
   </div>
 </dialog>
 
+<!-- A folha da casca (Registar, obra, equipa, Localizações, palavra-passe, um dia do diário): o conteúdo é da casca.js -->
+<dialog class="mv-folha" id="folha-casca" aria-labelledby="fx-t">
+  <div class="mv-folha-in">
+    <div class="mv-pega" aria-hidden="true"></div>
+    <div class="mv-folha-h"><span class="mv-folha-ht"><h2 id="fx-t" tabindex="-1"></h2><small id="fx-s" hidden></small></span><button type="button" class="mv-icb" data-fechar aria-label="Fechar"><span data-ic="x"></span></button></div>
+    <div class="mv-folha-c" id="fx-c"></div>
+    <div class="mv-folha-p" id="fx-p" hidden></div>
+  </div>
+</dialog>
+
+<script src="feriados.js"></script>
 <script src="config.js"></script>
 <script src="classificacao.js"></script>
 <script src="logica.js"></script>
+<script src="diario.js"></script>
 <script src="icones.js"></script>
+<script src="casca.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-/* DOE · Ocorrências pelo telemóvel — service worker (a página abre sem rede). Sem bibliotecas.
+/* DOEX · app do telemóvel (ocorrências e diário de obra) — service worker (a página abre sem rede). Sem bibliotecas.
    Estratégia: PRÉ-CACHE com versão. Ao instalar guarda os ficheiros da página (todos da própria origem) numa cache
    com o nome da versão; ao abrir serve sempre dessa cache (abre em modo de avião). NÃO se actualiza ficheiro a
    ficheiro em segundo plano — isso misturava um app.js novo com um logica.js velho. A «revalidação» é o próprio
@@ -7,13 +7,13 @@
    sempre: ao tocar (ou ao reabrir a página com todas as janelas fechadas) a versão nova assume e a velha apaga-se.
    Nunca guarda pedidos à API nem ao Storage (outra origem: nem sequer os intercepta) e nunca guarda uma resposta
    que não seja 200.
-   VERSAO = resumo dos 13 ficheiros acima (movel/versao.js). Mudar um ficheiro da página SEM subir a versão faz o
+   VERSAO = resumo dos 16 ficheiros acima (movel/versao.js). Mudar um ficheiro da página SEM subir a versão faz o
    teste falhar: sem isso os telemóveis ficavam com a página velha. Sobe-se com: node movel/versao.js --escrever */
 'use strict';
-var VERSAO = '0f73742446fb';
+var VERSAO = '68eca705ae03';
 var PREFIXO = 'doe-movel-';
 var CACHE = PREFIXO + VERSAO;
-var FICHEIROS = ['./', 'index.html', 'app.js', 'logica.js', 'config.js', 'classificacao.js', 'icones.js', 'estilo.css', 'manifest.webmanifest', 'logo-doex.png', 'logo-doex-escuro.png', 'icone-180.png', 'icone-192.png', 'icone-512.png'];
+var FICHEIROS = ['./', 'index.html', 'app.js', 'logica.js', 'diario.js', 'casca.js', 'config.js', 'classificacao.js', 'feriados.js', 'icones.js', 'estilo.css', 'manifest.webmanifest', 'logo-doex.png', 'logo-doex-escuro.png', 'icone-180.png', 'icone-192.png', 'icone-512.png'];
 
 function urlDe(f) { return new URL(f, self.location.href).href; }
 function semPesquisa(u) { var x = new URL(u); x.search = ''; x.hash = ''; return x.href; }

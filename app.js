@@ -11,6 +11,7 @@
 (function () {
   'use strict';
   var M = self.DoeMovel;
+  var C = self.DoeMovelCasca || null;   // a casca da app (casca.js): Hoje, Diário, Por enviar, Conta; sem ela a página é só a ocorrência
   if (self.DOE_MOVEL_CLASSIF) M.definirClassificacao(self.DOE_MOVEL_CLASSIF);   // listas geradas a partir da app (classificacao.js)
   var IC = self.DOE_MOVEL_ICONES || { ui: {}, produto: {} };
   var API = (self.DOE_MOVEL_CONFIG && self.DOE_MOVEL_CONFIG.api) || '';
@@ -97,7 +98,7 @@
   }
   // A versão nova recarrega a página: sem armazém persistente isso apagava o rascunho e a fila. Aí a faixa diz-o, e o
   // «Atualizar» espera até não haver nada só nesta página (ou que a pessoa confirme «Atualizar na mesma»).
-  function trabalhoSoNaPagina() { return est.pend.length + est.alheios.length + (est.rasc && !M.rascunhoVazio(est.rasc) ? 1 : 0); }
+  function trabalhoSoNaPagina() { return est.pend.length + est.alheios.length + (est.rasc && !M.rascunhoVazio(est.rasc) ? 1 : 0) + (C ? C.trabalhoNaPagina() : 0); }   // também os diários (fila e rascunhos)
   function desenharNovaVersao() {
     var t = $('nova-versao') && $('nova-versao').querySelector('.mv-faixa-t'); if (!t) return;
     t.textContent = '';
@@ -106,6 +107,8 @@
   function avisoNovaVersao(n) {
     var a = $('nova-versao-aviso'); if (!a) return;
     if (!n) { a.hidden = true; return; }
+    var nd = C ? C.trabalhoNaPagina() : 0;
+    if (nd) { $('nova-versao-aviso-t').textContent = (n === 1 ? 'Tens 1 registo por enviar que só está nesta página: se atualizares, perde-se.' : 'Tens ' + n + ' registos por enviar (ocorrências e diários) que só estão nesta página: se atualizares, perdem-se.'); a.hidden = false; return; }
     $('nova-versao-aviso-t').textContent = n === 1 ? 'Tens 1 ocorrência por enviar que só está nesta página: se atualizares, perde-se.' : 'Tens ' + n + ' ocorrências por enviar que só estão nesta página: se atualizares, perdem-se.';
     a.hidden = false;
   }
@@ -189,18 +192,24 @@
   }
 
   // ── Vistas, cabeçalho e progresso ──
+  // As vistas: as da ocorrência (login, registo, envio) e as da casca (casca.js). Cada uma diz que barra tem em baixo:
+  // a do formulário (por cima da barra de destinos, com «‹ Hoje» no cabeçalho) ou, no Hoje, a barra de destinos.
+  var VISTAS = ['v-login', 'v-registo', 'v-envio', 'v-hoje', 'v-diario', 'v-dia-envio', 'v-diario7', 'v-fila'];
+  var BARRA_DE = { 'v-registo': 'barra-reg', 'v-envio': 'barra-env', 'v-diario': 'barra-dia', 'v-dia-envio': 'barra-dia-env', 'v-diario7': 'barra-d7' };
   function ir(vista) {
     var mudou = est.vista !== vista;
     est.vista = vista;
-    ['v-login', 'v-registo', 'v-envio'].forEach(function (v) { $(v).hidden = v !== vista; });
+    VISTAS.forEach(function (v) { var e = $(v); if (e) e.hidden = v !== vista; });
     document.documentElement.classList.toggle('mv-em-login', vista === 'v-login');
+    document.documentElement.classList.toggle('mv-casca', !!(C && C.ehCasca(vista)));
     if (mudou) { desenharFaixaRede(); desenharDica(); }
-    $('cab').hidden = vista === 'v-login';
+    $('cab').hidden = vista === 'v-login' || vista === 'v-hoje';
     $('prog').hidden = vista !== 'v-registo';
-    $('barra').hidden = vista === 'v-login';
-    $('barra-reg').hidden = vista !== 'v-registo';
-    $('barra-env').hidden = vista !== 'v-envio';
-    $('barra').classList.toggle('sem-fio', vista === 'v-envio');
+    $('barra').hidden = !BARRA_DE[vista];
+    Object.keys(BARRA_DE).forEach(function (v) { var b = $(BARRA_DE[v]); if (b) b.hidden = v !== vista; });
+    $('barra').classList.toggle('sem-fio', vista === 'v-envio' || vista === 'v-dia-envio');
+    if ($('nav')) $('nav').hidden = vista !== 'v-hoje';
+    if (C && vista !== 'v-login') C.definirVista(vista);
     desenharCabecalho();
     medirBarra();
     if (mudou) { est.rolou = false; window.scrollTo(0, 0); }
@@ -211,7 +220,11 @@
   function obraTexto(id) { var o = obraDe(id); return o ? (o.codigo ? o.codigo + ' · ' + o.nome : o.nome) : ''; }
   function desenharCabecalho() {
     var s = est.sessao, nome = (s && s.nome) || '';
-    $('conta').hidden = !s;
+    $('conta').hidden = !s || !!C;   // com a casca a conta vive na barra de destinos; nos formulários o cabeçalho tem «‹ Hoje»
+    $('cab-volta-t').textContent = C ? C.rotuloVoltar() : 'Hoje';
+    $('cab-volta').hidden = !C;
+    $('cab').classList.toggle('rolou', !!est.rolou);
+    if (C && C.ehCasca(est.vista)) { $('cab-t').textContent = C.titulo(est.vista); $('quem').textContent = ''; return; }
     $('conta-ini').textContent = M.iniciais(nome) || '·';
     $('conta').setAttribute('aria-label', 'Conta' + (nome ? ': ' + nome : ''));
     if (est.vista === 'v-envio') { $('cab-t').textContent = 'Ocorrência'; $('quem').textContent = obraTexto(est.envioObra); return; }
@@ -251,6 +264,7 @@
     var t = el('span', 'mv-faixa-t'), p = primeiraFrase(mensagemHonesta(nota)); textoEm(t, p[0], p[1]); n.appendChild(t);
   }
   function pedirLogin(nota) {
+    if (C && est.vista && est.vista !== 'v-login') C.antesDoLogin();
     faixa('');
     fecharFolhas();
     est.avisoNotaLogin = nota || '';
@@ -259,13 +273,15 @@
     $('l-pass').value = ''; $('l-pass').type = 'password'; $('l-ver').setAttribute('aria-pressed', 'false'); $('l-ver').textContent = ''; $('l-ver').appendChild(icone('olho'));
     ir('v-login');
   }
-  function sair() {
+  function sair(notaDada) {
     gravarJa();
+    if (C) C.aoSair();   // a cache das leituras (diário, localizações) sai com a conta
     var tinha = est.pend.length || (est.rasc && !M.rascunhoVazio(est.rasc));
     if (est.rasc && !M.rascunhoVazio(est.rasc) && !est.rasc.contaId && contaAtual()) { est.rasc.contaId = contaAtual(); est.rasc.contaNome = (est.sessao && est.sessao.nome) || ''; guardar(est.rasc); }
+    est.ultimaConta = contaAtual() || est.ultimaConta || '';   // quem volta a entrar a seguir é a mesma conta? (o «Corrigir» com novo login volta ao formulário)
     lsApagar(LS_SESSAO); est.sessao = null; faixa('');
     reatribuir();
-    pedirLogin(tinha ? 'Saíste. O que ficou por enviar continua guardado neste telemóvel, na tua conta.' : '');
+    pedirLogin(typeof notaDada === 'string' ? notaDada : (tinha ? 'Saíste. O que ficou por enviar continua guardado neste telemóvel, na tua conta.' : ''));
   }
 
   // ── A fila é de cada conta ──
@@ -519,9 +535,11 @@
     };
     if (ja || semMovimento()) fim(); else dlg._t = setTimeout(fim, 200);
   }
-  function fecharFolhas() { ['folha-obra', 'folha-prod', 'folha-conta'].forEach(function (id) { var d = $(id); if (!d.hasAttribute('open')) return; d._semFoco = true; fecharFolha(d, null, true); }); }
+  // semVoltar: quem fecha vai abrir um ecrã que fica no lugar da entrada da folha no histórico (a casca), sem history.back()
+  // (o back é assíncrono e desfazia o ecrã que se abre logo a seguir)
+  function fecharFolhas(semVoltar) { if (semVoltar === true) folhaHist = false; ['folha-obra', 'folha-prod', 'folha-conta', 'folha-casca'].forEach(function (id) { var d = $(id); if (!d.hasAttribute('open')) return; d._semFoco = true; fecharFolha(d, null, true); }); }
   function ligarFolhas() {
-    ['folha-obra', 'folha-prod', 'folha-conta'].forEach(function (id) {
+    ['folha-obra', 'folha-prod', 'folha-conta', 'folha-casca'].forEach(function (id) {
       var d = $(id);
       d.addEventListener('close', function () { aoFecharFolha(d); });
       d.addEventListener('cancel', function (ev) { ev.preventDefault(); fecharFolha(d); });   // Esc (e o «voltar» do Android): com animação
@@ -533,11 +551,13 @@
       if (ev.key === 'Escape' && folhaAberta && typeof folhaAberta.showModal !== 'function') { ev.preventDefault(); fecharFolha(folhaAberta); }
     });
   }
-  function abrirConta() {
+  function abrirConta(preencher) {
     var s = est.sessao; if (!s) return;
     $('fc-ini').textContent = M.iniciais(s.nome) || '·';
     $('fc-nome').textContent = s.nome || 'A tua conta';
     $('fc-sessao').textContent = sessaoValida() ? 'Sessão neste telemóvel até ' + M.textoDia(s.expiraEm) : 'A sessão expirou: ao enviar, entra outra vez';
+    $('fc-versao').textContent = 'DOEX · versão ' + (est.versaoPag || '—');
+    if (typeof preencher === 'function') preencher($('fc-ops'));
     abrirFolha($('folha-conta'), $('fc-t'));
   }
 
@@ -669,7 +689,10 @@
   function medirBarra() {
     var c = $('cab'), hc = c && !c.hidden ? c.offsetHeight : 0;
     if (hc > 0) document.documentElement.style.setProperty('--mv-cab-h', hc + 'px');   // com a letra aumentada o cabeçalho cresce: o progresso cola-se por baixo dele
-    var b = $('barra'); if (!b || b.hidden) return;
+    var b = $('barra'), n = $('nav');
+    if (b && b.hidden && n && n.hidden) { if (est.vista && est.vista !== 'v-login') document.documentElement.style.setProperty('--mv-barra-h', '0px'); return; }   // «Por enviar»: sem barra em baixo
+    if (b && b.hidden) b = n;
+    if (!b || b.hidden) return;
     var h = b.offsetHeight; if (h > 0) document.documentElement.style.setProperty('--mv-barra-h', h + 'px');
   }
   // Teclado aberto: no iPhone o teclado não encolhe a página e a barra fixa ficava por baixo dele; sobe-se pelo
@@ -696,8 +719,9 @@
     document.addEventListener('focusout', depois);
   }
   function garantirCampoVisivel(vv) {   // o campo da descrição nunca fica tapado pela barra nem pelo cabeçalho
-    var a = document.activeElement; if (!a || a.id !== 'texto' || est.vista !== 'v-registo') return;
-    var r = a.getBoundingClientRect(), topo = $('prog').getBoundingClientRect().bottom + 8;
+    var a = document.activeElement; if (!a || a.tagName !== 'TEXTAREA' || $('barra').hidden || $('cab').hidden) return;   // a descrição da ocorrência e «O que se fez» do diário
+    var ref = !$('prog').hidden ? $('prog') : $('cab');
+    var r = a.getBoundingClientRect(), topo = ref.getBoundingClientRect().bottom + 8;
     var fundo = (vv ? vv.offsetTop + vv.height : window.innerHeight) - $('barra').offsetHeight - 8;
     var precisa = Math.min(r.height, Math.max(0, fundo - topo));
     if (r.top < topo) window.scrollBy(0, r.top - topo);
@@ -707,12 +731,13 @@
   // ── Envio ──
   function listaPendentes() { return est.pend.filter(function (r) { return r.estado === 'a-enviar'; }); }
   function desenharFaixaFila() {
-    var n = est.pend.filter(function (r) { return r.estado === 'a-enviar' && r.id !== est.vistaId; }).length;
+    var n = est.pend.filter(function (r) { return r.estado === 'a-enviar' && r.id !== est.vistaId; }).length + (C ? C.nDiariosPorEnviar() : 0);   // conta as ocorrências e os diários
     var forte = n === 1 ? '1 por enviar' : n + ' por enviar';
     var onde = est.semArmazem ? (n === 1 ? ', só nesta página (não a feches)' : ', só nesta página (não a feches)') : (n === 1 ? ', guardada no telemóvel' : ', guardadas no telemóvel');
     if (n && !sessaoValida()) faixa({ forte: forte, texto: onde + (n === 1 ? '. A sessão expirou: entra outra vez (com rede) para a enviar.' : '. A sessão expirou: entra outra vez (com rede) para as enviar.'), ic: 'relogio', botao: 'Entrar' });
     else if (n) faixa({ forte: forte, texto: onde + (n === 1 ? '. Segue com rede, com a página aberta.' : '. Seguem com rede, com a página aberta.'), ic: 'tel', botao: 'Ver' });
     else if (!$('faixa').classList.contains('pos')) faixa('');
+    if (C) C.aoMudarFila();
   }
   function linhaFoto(r, f, i, res) {
     var li = el('div', 'mv-fl');
@@ -819,12 +844,12 @@
       r.ultimo = res;
       if (res.estado === 'entregue') {
         if (est.vistaId === r.id) desenharEnvio(r, res);
-        else faixa({ forte: 'Ocorrência ' + r.numero + ' recebida.', texto: '', tipo: 'pos', ic: 'ok' });
+        else { faixa({ forte: 'Ocorrência ' + r.numero + ' recebida.', texto: '', tipo: 'pos', ic: 'ok' }); if (C) C.aoMudarFila({ recebida: r.numero }); }
         est.pend = est.pend.filter(function (x) { return x.id !== r.id; });
         if (est.alheios.some(function (x) { return x.id === r.id; })) { est.alheios = est.alheios.filter(function (x) { return x.id !== r.id; }); desenharAlheios(); }   // acabou de seguir depois de a conta mudar
         setTimeout(function () { apagar(r.id); }, 0);
       } else if (res.estado === 'login') {
-        pedirLogin(res.mensagem);
+        if (res.revogado) sair(res.mensagem); else pedirLogin(res.mensagem);   // telemóvel desligado: sai a sessão e o que se leu; a fila fica
       } else {
         r.tentativas = (r.tentativas || 0) + 1;
         if (res.estado === 'corrigir' || res.estado === 'parar') r.parado = true;
@@ -933,6 +958,24 @@
     desenharRegisto(); desenharFaixaFila();
   }
 
+  // ── A ponte para a casca (casca.js): só o que ela precisa, sem lhe dar o estado inteiro ──
+  function ponte() {
+    return {
+      sessao: function () { return est.sessao; }, sessaoValida: sessaoValida, token: function () { return sessaoValida() ? est.sessao.token : ''; },
+      api: function () { return API; }, icone: icone, focar: focar, ir: ir, vista: function () { return est.vista; }, medirBarra: medirBarra,
+      gravarJa: gravarJa, semArmazem: function () { return est.semArmazem; },
+      abrirOcorrencia: function () { novaOcorrencia(); },
+      verOcorrencia: function (id) { var r = est.pend.filter(function (x) { return x.id === id; })[0]; if (r) desenharEnvio(r, r.ultimo || null); },
+      temRascunho: function () { return !!(est.rasc && est.rasc.estado === 'rascunho' && !M.rascunhoVazio(est.rasc)); },
+      ocorrenciasPorEnviar: function () { return { pend: listaPendentes().filter(function (r) { return M.ehDaConta(r, contaAtual()); }), alheios: est.alheios.slice(), rascunho: est.rasc && est.rasc.estado === 'rascunho' && !M.rascunhoVazio(est.rasc) ? est.rasc : null }; },
+      pedirLogin: pedirLogin, sairCom: function (nota) { sair(nota); },
+      abrirFolha: abrirFolha, fecharFolha: fecharFolha, fecharFolhas: fecharFolhas, abrirConta: abrirConta,
+      guardarRegisto: guardar, apagarRegisto: apagar,
+      comprimir: function (file) { return comPrazo(comprimir(file), M.LIMITES.msPrepararFoto); },
+      trocarToken: function (token, expiraEm) { if (!est.sessao || !token) return; est.sessao.token = String(token); if (expiraEm) est.sessao.expiraEm = String(expiraEm); lsGravar(LS_SESSAO, JSON.stringify(est.sessao)); },
+    };
+  }
+
   // ── Arranque ──
   var entrando = false;
   function aEntrar(sim) {
@@ -957,11 +1000,15 @@
     try { r = await M.login(deps(), u, p); } finally { aEntrar(false); }
     $('l-pass').value = '';
     if (!r.ok) { var tp = tipoErroLogin(r); mostrarErro('login-erro', r.msg, tp[0], tp[1]); return; }
+    var contaAntes = contaAtual() || est.ultimaConta || '';
     est.sessao = r.sessao;
     lsGravar(LS_SESSAO, JSON.stringify(r.sessao));     // só token, validade, conta, nome e obras; nunca a palavra-passe
     faixa('');
     reatribuir();                                      // os rascunhos de outra conta ficam de fora
-    if (est.vistaId) { var rr = est.pend.filter(function (x) { return x.id === est.vistaId; })[0]; if (rr) { desenharEnvio(rr, null); } else novaOcorrencia(); }
+    var rr = est.vistaId ? est.pend.filter(function (x) { return x.id === est.vistaId; })[0] : null;
+    if (rr) desenharEnvio(rr, null);
+    else if (C) C.depoisDoLogin(contaAntes !== r.sessao.contaId);   // volta ao ecrã onde estava (ou ao primeiro, se é outra conta)
+    else if (est.vistaId) novaOcorrencia();
     else desenharRegisto();
     desenharFaixaFila();
     est.pend.forEach(function (x) { if (x.ultimo && x.ultimo.relogin) x.parado = false; });
@@ -1009,11 +1056,13 @@
     var todos = [];
     try { todos = await est.store.listar(); } catch (e) { todos = []; }
     todos.sort(function (a, b) { return String(a.criadoEm || a.capturadoEm).localeCompare(String(b.criadoEm || b.capturadoEm)); });
-    var todosVivos = [];
+    var todosVivos = [], diarios = [];
     todos.forEach(function (r) {
+      if (r && r.tipo === 'diario') { diarios.push(r); return; }   // a mesma fila, outro tipo: a casca trata deles
       if (r.estado === 'entregue') { apagar(r.id); return; }
       todosVivos.push(r);
     });
+    if (C) await C.ligar(ponte());   // os diários vivem na base própria da casca (doeMovelDiario)
     est.rasc = null; est.pend = []; est.alheios = [];
     // reparte pelo dono: com a sessão (mesmo caducada) é a conta dela; sem sessão nenhuma, só os sem dono são «seus»
     est.pend = todosVivos.filter(function (r) { return r.estado === 'a-enviar'; });
@@ -1053,8 +1102,10 @@
     $('l-ver').addEventListener('click', verPalavraPasse);
     $('dica-fechar').addEventListener('click', fecharDica);
     $('conta').addEventListener('click', abrirConta);
-    $('sair').addEventListener('click', sair);
+    $('sair').addEventListener('click', function () { sair(); });
     $('e-nova').addEventListener('click', novaOcorrencia);
+    $('e-feito').addEventListener('click', function () { if (C) C.irHoje(); else novaOcorrencia(); });
+    $('cab-volta').addEventListener('click', function () { if (C) C.voltar(); });
     $('e-retry').addEventListener('click', function () { var r = est.pend.filter(function (x) { return x.id === est.vistaId; })[0]; if (r) tentarDeNovo(r); });
     $('e-corrigir').addEventListener('click', aoCorrigir);
     window.addEventListener('online', function () { desenharFaixaRede(); desenharBarra(); est.pend.forEach(function (r) { r.tentativas = 0; r.fotos.forEach(function (f) { if (f.estado === 'erro') f.estado = 'espera'; }); }); drenar(false); });
@@ -1067,7 +1118,7 @@
     desenharFaixaRede();
     registarSW();
     if (!est.sessao) { pedirLogin(est.pend.length || est.alheios.length || !M.rascunhoVazio(est.rasc) ? 'Entra. O que escreveste está guardado neste telemóvel.' : ''); }
-    else { desenharRegisto(); desenharFaixaFila(); drenar(false); }   // sessão caducada: abre na mesma (sem rede); o envio pede o login
+    else { if (C) C.abrirInicial(); else desenharRegisto(); desenharFaixaFila(); drenar(false); }   // sessão caducada: abre na mesma (sem rede); o envio pede o login
     desenharSemArmazem();   // sem IndexedDB: diz-se já, antes de a pessoa escrever
   }
 
@@ -1095,7 +1146,7 @@
     var pedirVersao = function () { try { if (nav.controller) nav.controller.postMessage('versao'); } catch (e) { /* sem resposta: fica «DOE Facade» */ } };
     nav.addEventListener('message', function (ev) {
       var v = ev && ev.data && ev.data.versao;
-      if (typeof v === 'string' && /^[0-9a-f]{6,}$/.test(v)) { var p = $('versao-pag'); p.textContent = 'DOE Facade · versão da página '; p.appendChild(el('code', null, v.slice(0, 8))); }
+      if (typeof v === 'string' && /^[0-9a-f]{6,}$/.test(v)) { est.versaoPag = v.slice(0, 8); var p = $('versao-pag'); p.textContent = 'DOE Facade · versão da página '; p.appendChild(el('code', null, v.slice(0, 8))); }
     });
     nav.addEventListener('controllerchange', function () { if (est.recarregar) location.reload(); else pedirVersao(); });
     pedirVersao();

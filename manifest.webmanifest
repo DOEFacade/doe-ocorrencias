@@ -1,7 +1,7 @@
 {
-  "name": "DOE · Registar ocorrência",
-  "short_name": "Ocorrência",
-  "description": "Regista uma ocorrência de obra com fotos, fora da rede da empresa.",
+  "name": "DOEX",
+  "short_name": "DOEX",
+  "description": "Ocorrências e diário de obra da DOE Facade, no telemóvel.",
   "lang": "pt-PT",
   "start_url": "./index.html",
   "scope": "./",
@@ -27,6 +27,34 @@
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ocorrência",
+      "short_name": "Ocorrência",
+      "description": "Registar uma ocorrência em obra",
+      "url": "./index.html?ir=ocorrencia",
+      "icons": [
+        {
+          "src": "icone-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Diário de obra",
+      "short_name": "Diário",
+      "description": "Fazer o diário de hoje",
+      "url": "./index.html?ir=diario",
+      "icons": [
+        {
+          "src": "icone-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
