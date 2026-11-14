@@ -8,7 +8,10 @@
    - cada foto local fica com o `n` que o servidor lhe deu (`fotos[].nPedido → n`); `n: null` = ficou de fora;
    - com `reler` (ou `fundido`) o registo relê-se antes da correcção seguinte;
    - o que se lê do servidor guarda-se POR CONTA e nunca aparece a outra conta (cacheDaConta);
-   - nada se perde: o que não entrou fica na fila, com o motivo. */
+   - nada se perde: o que não entrou fica na fila, com o motivo;
+   - liberdade de corrigir (decisão do Pedro, 13 nov 2026): quem registou corrige e anula até 7 dias depois do dia do registo
+     (o GP e o DO da obra, o seu, a qualquer altura). Corrigir e Anular mostram-se só pelo `pode` do servidor (GET
+     /movel/diario?obra=&dia=): a página não decide pelo dia. */
 (function (raiz, fabrica) {
   if (typeof module === 'object' && module.exports) module.exports = fabrica();
   else raiz.DoeMovelDiario = fabrica();
@@ -61,7 +64,7 @@
   function seteDias(hoje) { var l = []; for (var k = 6; k >= 0; k--) l.push(somarDias(hoje, -k)); return l; }
 
   // ── Cache por conta (privacidade no aparelho) ──
-  function cacheVazia(contaId) { return { contaId: String(contaId || ''), hoje: null, obras: {}, ids: {}, versoes: {}, reler: {}, hist: [], locs: {}, registos: {}, dias: {}, lidoEm: '' }; }
+  function cacheVazia(contaId) { return { contaId: String(contaId || ''), hoje: null, obras: {}, ids: {}, versoes: {}, versoesMinhas: {}, reler: {}, hist: [], locs: {}, registos: {}, dias: {}, painel: {}, tf: {}, bc: {}, tfUlt: {}, lidoEm: '' }; }   // painel: as leituras do Hoje da fatia 2a (hoje.js); tf, bc: as listas dos trabalhos e dos bloqueios do cliente (trabalhos.js); tfUlt: a última Localização de um trabalho, por obra (trabalhos-ecra.js)
   /** A cache só serve a conta que a escreveu: outra conta recebe uma vazia (e a antiga deita-se fora). */
   function cacheDaConta(cache, contaId) {
     if (!contaId) return cacheVazia('');
@@ -98,6 +101,32 @@
     cache.lidoEm = (agora || new Date()).toISOString();
     return cache;
   }
+  /** O meu registo de um dia passado (GET /movel/diario?obra=&dia=, 13 nov 2026): entra na cópia do registo (com o `pode` e o
+      `corrigeAte`), sem mexer no que a obra diz de hoje. Sem registo meu nesse dia (anulado, ou nunca houve), a cópia sai. */
+  function guardarDiaLido(cache, obraId, data) {
+    var dia = data && data.dia; if (!RE_DIA.test(String(dia || ''))) return cache;
+    var k = chaveDia(obraId, dia), m = data.meu || null;
+    if (!m) { delete cache.registos[k]; cache.hist = (cache.hist || []).filter(function (x) { return !(x.obraId === String(obraId) && x.dia === dia && !x.soEquipas); }); return cache; }
+    cache.registos[k] = Object.assign(copia(m), { conhecido: { texto: true, localizacoes: true, fotos: true } });
+    idRegistoDe(cache, obraId, dia, m); cache.versoes[m.id] = m.versao;
+    registarHistorico(cache, { obraId: obraId, dia: dia, equipas: m.equipas, texto: m.texto, fotos: (m.fotos || []).length, versao: m.versao, alteradoEm: m.alteradoEm });
+    return cache;
+  }
+  /** Depois de um anular aceite: o registo deixa de contar neste telemóvel (a cópia, o histórico dos 7 dias, o «meu de hoje»).
+      O id fica para esse dia: gravar outra vez o mesmo dia repõe-no no servidor. */
+  function aoAnulado(cache, obraId, dia, data) {
+    var k = chaveDia(obraId, dia), id = (data && data.id) || cache.ids[k];
+    delete cache.registos[k];
+    if (id && data && data.versao != null) cache.versoes[id] = Number(data.versao) || 0;
+    cache.hist = (cache.hist || []).filter(function (x) { return !(x.obraId === String(obraId) && x.dia === dia && !x.soEquipas); });
+    if (cache.hoje && cache.hoje.dia === dia) cache.hoje.meus = (cache.hoje.meus || []).filter(function (x) { return !(x.obraId === String(obraId)); });
+    var o = cache.obras[obraId]; if (o && o.dia === dia) o.meu = null;
+    var d = cache.dias && cache.dias[obraId]; var x = d && d.data && Array.isArray(d.data.dias) ? d.data.dias.filter(function (y) { return y.dia === dia; })[0] : null;
+    if (x && x.meu) { x.meu = null; x.registos = Math.max(0, (Number(x.registos) || 1) - 1); x.aproximado = true; }
+    return cache;
+  }
+  /** O Corrigir e o Anular de um registo: só o que o servidor disse (`pode`). Um servidor antigo não o manda: nada. */
+  function podeNoRegisto(meu, accao) { return !!(meu && Array.isArray(meu.pode) && meu.pode.indexOf(accao) >= 0); }
   function guardarObra(cache, obraId, data, agora) {
     var o = { dia: data.dia, fechaEm: data.fechaEm, meu: copia(data.meu || null), ultimo: copia(data.ultimo || null), sugestoes: copia(data.sugestoes || { equipas: [], frases: [] }), lidoEm: (agora || new Date()).toISOString() };
     cache.obras[obraId] = o;
@@ -193,8 +222,8 @@
     var meu = o.meu, ult = o.ultimo;
     if (meu) {
       var eq = copia(meu.equipas || []), kn = meu.conhecido || { texto: true, localizacoes: true, fotos: true };
-      return { obraId: o.obraId, dia: meu.dia || o.dia, corrigir: true, registoId: meu.id, versaoBase: Number(meu.versao) || 0, equipas: eq.length ? eq : [{ tipo: 'DOE', nome: 'DOE', homens: 0 }],
-        texto: String(meu.texto || ''), localizacoes: (meu.localizacoes || []).slice(), fotos: (meu.fotos || []).map(function (f) { return { n: f.n, estado: 'servidor', estadoServidor: f.estado, sha256: f.sha256, tipo: f.tipo, tamanho: f.tamanho }; }),
+      return { obraId: o.obraId, dia: meu.dia || o.dia, corrigir: true, registoId: meu.id, versaoBase: Number(meu.versao) || 0, pode: Array.isArray(meu.pode) ? meu.pode.slice() : null, corrigeAte: meu.corrigeAte || '', equipas: eq.length ? eq : [{ tipo: 'DOE', nome: 'DOE', homens: 0 }],
+        texto: String(meu.texto || ''), localizacoes: (meu.localizacoes || []).slice(), fotos: (meu.fotos || []).map(function (f) { return { n: f.n, estado: 'servidor', estadoServidor: f.estado, sha256: f.sha256, tipo: f.tipo, tamanho: f.tamanho, pode: Array.isArray(f.pode) ? f.pode.slice() : [] }; }),
         base: assinaturaEquipas(meu.equipas || []), baseDia: '', baseTexto: String(meu.texto || ''), nMax: (meu.fotos || []).reduce(function (a, f) { return Math.max(a, Number(f.n) || 0); }, Number(o.nMax) || 0),
         conhece: { texto: kn.texto !== false, localizacoes: kn.localizacoes !== false, fotos: kn.fotos !== false } };
     }
@@ -265,7 +294,7 @@
       registoId: f.registoId, pedidoId: novoPedidoId(o.novoId), obraId: f.obraId, dia: f.dia, capturadoEm: agora.toISOString(), criadoEm: agora.toISOString(),
       versaoBase: Number(f.versaoBase) || 0, corrigir: !!f.corrigir, equipas: equipasParaEnviar(f.equipas), texto: String(f.texto || '').trim(), localizacoes: (f.localizacoes || []).slice(),
       fotos: (f.fotos || []).filter(function (x) { return x.estado !== 'sem-lugar'; }).map(function (x) { var g = { n: x.n, nPedido: x.n, sha256: x.sha256, tipo: x.tipo, tamanho: x.tamanho, estado: x.estado === 'servidor' ? 'servidor' : 'por-declarar' }; if (x.blob) g.blob = x.blob; if (x.prev) g.prev = x.prev; return g; }),   // prev: a miniatura em memória (não vai para o disco nem ao servidor)
-      omitir: omissoes(f), tentou: false, resposta: null, erro: '', avisos: [], encadeado: !!o.encadeado };
+      tiradas: (f.tiradas || []).slice(), omitir: omissoes(f), tentou: false, resposta: null, erro: '', avisos: [], encadeado: !!o.encadeado };
   }
   /** Um «Guardar» novo para um registo que já está na fila e NUNCA saiu do telemóvel substitui-o (o mesmo lugar);
       se já saiu (a resposta pode ter-se perdido), o novo vai depois, encadeado. Devolve { fila, item, substituiu }. */
@@ -281,14 +310,17 @@
   // ── A resposta do servidor ──
   /** Aplica a resposta de POST /movel/diario ao item: adopta o id (fundido), guarda a versão e põe em cada foto local o
       `n` que o servidor lhe deu (pelo `nPedido`; `renumeradas` é só informação). Devolve o que a página tem de saber. */
-  function aplicarRespostaDiario(item, data) {
-    var avisos = (data.avisos || []).filter(function (a) { return a && a.campo === 'fotos'; });
+  function aplicarRespostaDiario(item, data, minha) {   // minha(id, versao): a versão foi feita por este telemóvel (P1)
+    var avisos = (data.avisos || []).filter(function (a) { return a && (a.campo === 'fotos' || (a.campo === 'dia' && a.motivo === 'do-registo')); });
     if (data.id) item.registoId = data.id;
-    var porN = {};
+    var porN = {}, foraJa = {};
     (data.fotos || []).forEach(function (fs) { porN[String(fs.nPedido)] = fs; });
+    // 7ec72d62 e P4 do servidor: uma foto que já tinha sido tirada (removida) ou retirada pelo DO/GP não volta: não se envia
+    (data.avisos || []).forEach(function (a) { if (a && a.campo === 'fotos' && (a.motivo === 'removida' || a.motivo === 'retirada')) foraJa[String(a.valor)] = true; });
     item.fotos.forEach(function (f) {
       var fs = porN[String(f.nPedido != null ? f.nPedido : f.n)];
       if (!fs) return;
+      if (fs.n == null && foraJa[String(fs.nPedido)]) { f.estado = 'removida'; f.uploadUrl = ''; delete f.blob; return; }
       if (fs.n == null || fs.estado === 'sem-lugar') { f.estado = 'sem-lugar'; f.uploadUrl = ''; return; }
       f.n = Number(fs.n);
       if (fs.estado === 'por-enviar' && !f.blob) { f.estado = 'servidor'; f.uploadUrl = ''; }   // A4: o ficheiro não está neste telemóvel: fica para quem o tem
@@ -299,14 +331,20 @@
     });
     item.resposta = { versao: Number(data.versao) || 0, repetido: !!data.repetido, fundido: !!data.fundido, substituiu: data.substituiu || null, reler: !!(data.reler || data.fundido || data.substituiu), renumeradas: data.renumeradas || [], aplicado: data.aplicado || null };
     item.avisos = avisos.map(textoAviso).filter(Boolean);
-    if (data.substituiu && data.substituiu.alteradoEm) item.avisos.push('Substituíste uma versão de ' + horaDe(data.substituiu.alteradoEm) + ', feita noutro telemóvel.');
+    if (item.releuArquivadas) item.avisos.push('Uma foto já estava nos documentos da obra: ficou no diário (só o DO ou o GP a retiram).');
+    if (data.substituiu && data.substituiu.alteradoEm) item.avisos.push('Substituíste uma versão de ' + horaDe(data.substituiu.alteradoEm) + (minha && minha(item.registoId, data.substituiu.versao) ? ', feita neste telemóvel (tiraste uma foto).' : ', feita noutro telemóvel.'));
     return { registoId: item.registoId, versao: item.resposta.versao, reler: item.resposta.reler, avisos: item.avisos, semLugar: item.fotos.filter(function (f) { return f.estado === 'sem-lugar'; }).length };
   }
   function horaDe(iso) { var d = new Date(iso); return isNaN(d.getTime()) ? '' : dois(d.getHours()) + ':' + dois(d.getMinutes()); }
   function textoAviso(a) {
+    if (a && a.campo === 'dia' && a.motivo === 'do-registo' && RE_DIA.test(String(a.valor || ''))) return 'A correcção foi para o diário de ' + textoDiaCurto(a.valor) + ', o dia em que o registaste.';   // 13 nov 2026: o mesmo registo, com o relógio do telemóvel noutro dia
     if (!a || a.campo !== 'fotos') return '';
     if (a.motivo === 'nao-removida') return 'A foto ' + a.valor + ' não foi tirada do diário (foi mexido noutro telemóvel): abre-o e tira-a outra vez.';
-    if (a.motivo === 'sem-lugar') return 'Uma foto não coube no diário (máximo de 6): ficou no telemóvel.';
+    // revisão de 8bf7d34f (P1): não promete que «ficou no telemóvel»: o item entregue (ou a parada substituída) sai da fila com ela
+    if (a.motivo === 'sem-lugar') return 'Uma foto não coube no diário (máximo de 6): ficou de fora e já não está no telemóvel.';
+    if (a.motivo === 'reservada') return 'A foto ' + a.valor + ' está a ser arquivada agora: ficou no diário. Tira-a outra vez daqui a pouco.';
+    if (a.motivo === 'retirada') return 'Uma foto já tinha sido retirada pelo DO ou pelo GP: não voltou ao diário.';
+    if (a.motivo === 'removida') return 'A foto ' + a.valor + ' já tinha sido tirada: não voltou ao diário. Para a voltar a pôr, tira outra.';
     return '';
   }
   /** Terminada PARA ESTE TELEMÓVEL: uma foto sem o ficheiro aqui nunca é «por acabar» deste telemóvel (A4). */
@@ -329,12 +367,22 @@
   // ── Erros → o que fazer, em linguagem de obra ──
   // accao: 'repetir' (rede/servidor, volta a tentar com espera), 'login' (pede o login sem perder a fila), 'corrigir' (a
   // pessoa muda algo), 'parar' (não adianta repetir: fica com o motivo), 'novo-n' / 'novo-id' (a página resolve sozinha).
+  /** Os segundos até `ate` (a reserva de uma foto), entre 1 e 10 minutos. */
+  function segAte(ate) { var t = Date.parse(ate || ''); return isNaN(t) ? 600 : Math.max(60, Math.min(600, Math.ceil((t - Date.now()) / 1000) + 1)); }
   function textoEspera(seg) { seg = Number(seg) || 0; if (seg >= 90) return Math.ceil(seg / 60) + ' minutos'; if (seg >= 60) return '1 minuto'; seg = Math.max(1, Math.ceil(seg)); return seg === 1 ? '1 segundo' : seg + ' segundos'; }
   function mensagemDiario(e) {
     var c = (e && e.code) || '', s = (e && e.status) || 0, m = (e && e.message) || '', d = (e && e.details) || {};
     if (e && e.rede) return { accao: 'repetir', rede: true, texto: e.online === false ? 'Sem rede. Fica no telemóvel e segue quando houver rede.' : 'Não consegui falar com o servidor (rede fraca). Fica no telemóvel; tento outra vez.' };
     switch (c) {
-      case 'DIA_FECHADO': return { accao: 'parar', fechado: true, texto: d.motivo === 'foto' ? 'Esta foto já não entra: o dia fechou há mais de 7 dias.' : (d.motivo === 'prazo' ? 'Este diário já não entra: passaram mais de 7 dias.' : 'O dia deste diário já fechou: só se corrige até à meia-noite. Ficou no telemóvel.') };
+      // 13 nov 2026 (liberdade de corrigir): a janela é de 7 dias depois do dia do registo; `fechaEm` = quando fechou
+      case 'DIA_FECHADO': return { accao: 'parar', fechado: true, texto: d.motivo === 'foto' ? 'Esta foto já não entra: passaram mais de 7 dias desde que a juntaste.' : (d.motivo === 'prazo' ? 'Este diário já não entra: passaram mais de 7 dias.' : 'Este diário já não se corrige: quem o fez corrige e anula até 7 dias depois do dia. Depois, só o DO ou o GP. Ficou no telemóvel.') };
+      case 'NAO_EXISTE': return { accao: 'parar', texto: 'Este diário já não existe no servidor.' };
+      case 'REGISTO_ANULADO': return { accao: 'parar', texto: m || 'Este diário foi anulado.' };
+      case 'FOTO_ARQUIVADA': return { accao: 'reler-fotos', texto: 'Uma das fotos já está nos documentos da obra: só o DO ou o GP a retiram.' };   // revisão (C2): a correcção relê e segue com ela
+      // revisão adversarial (e0f5367e): um posto está a arquivar a foto agora (10 min): repete-se depois, sem perder o pedido
+      case 'FOTO_RESERVADA': return { accao: 'repetir', longo: true, reservada: true, texto: m || 'Outro posto está a arquivar esta foto. Tento outra vez daqui a pouco.', retryAfter: segAte(d.ate) };
+      // P1: o GP ou o DO anularam este registo: a correcção não o repõe e não se repete
+      case 'ANULADO_POR_OUTRO': return { accao: 'parar', anulado: true, texto: 'Anulado' + (d.por ? ' por ' + d.por : '') + ': fala com o GP.' };
       case 'TOKEN_REVOGADO': return { accao: 'login', revogado: true, texto: 'Este telemóvel foi desligado (palavra-passe mudada ou «Desligar os meus telemóveis»). Entra outra vez; o que registaste fica guardado.' };
       case 'PASSWORD_ALTERADA_ENTRA_DE_NOVO': return { accao: 'login', texto: m || 'A palavra-passe foi alterada; entra de novo.' };
       case 'UNAUTHORIZED': return { accao: 'login', texto: d.motivo === 'expirado' ? 'A sessão acabou. Entra outra vez; o que registaste fica guardado.' : 'Entra outra vez; o que registaste fica guardado.' };
@@ -396,7 +444,11 @@
     return { ok: false, status: res.status, code: er.code || '', message: er.message || '', details: er.details || {}, retryAfter: lerRetryAfter(res, er) };
   }
   function lerHoje(deps) { return pedir(deps, 'GET', '/movel/diario/hoje'); }
-  function lerObra(deps, obraId) { return pedir(deps, 'GET', '/movel/diario?obra=' + encodeURIComponent(obraId)); }
+  /** dia (13 nov 2026, opcional): o meu registo de um dia dos últimos 14; omitido = hoje. */
+  function lerObra(deps, obraId, dia) { return pedir(deps, 'GET', '/movel/diario?obra=' + encodeURIComponent(obraId) + (dia ? '&dia=' + encodeURIComponent(dia) : '')); }
+  /** POST /movel/diario/anular (13 nov 2026). o: { id, pedidoId, versaoBase }. O registo não se apaga: deixa de contar; gravar o
+      dia outra vez repõe-no. As fotos ainda não arquivadas saem. */
+  function anular(deps, o) { var c = { id: o.id, pedidoId: o.pedidoId }; if (Number.isInteger(o.versaoBase)) c.versaoBase = o.versaoBase; return pedir(deps, 'POST', '/movel/diario/anular', c); }
   function lerLocalizacoes(deps, obraId) { return pedir(deps, 'GET', '/movel/obras/localizacoes?obra=' + encodeURIComponent(obraId)); }
   function lerDias(deps, obraId) { return pedir(deps, 'GET', '/movel/diario/dias?obra=' + encodeURIComponent(obraId)); }
   function mudarPassword(deps, actual, nova) { return pedir(deps, 'POST', '/movel/password', { actual: String(actual || ''), nova: String(nova || '') }); }
@@ -421,8 +473,20 @@
     while (!item.resposta) {
       var x = await gravar();
       if (!x.ok && x.rede && x.online === false) item.tentou = false;
-      if (x.ok) { aplicarRespostaDiario(item, x.data); item.erro = ''; if (deps.aoGravado) await deps.aoGravado(item, x.data); await guardar(); break; }
+      if (x.ok) { aplicarRespostaDiario(item, x.data, deps.versaoMinha); item.erro = ''; if (deps.aoGravado) await deps.aoGravado(item, x.data); await guardar(); break; }
       var m = mensagemDiario(x);
+      // revisão (C2): uma foto da lista foi arquivada entretanto: relê o registo, junta-lhe as arquivadas e segue (não pára tudo)
+      if (m.accao === 'reler-fotos') {
+        ajustes++;
+        var lr = ajustes > 3 ? { ok: false } : await lerObra(deps, item.obraId, item.dia);
+        if (lr.ok && lr.data.meu) {
+          (lr.data.meu.fotos || []).filter(function (fs) { return fs.estado !== 'removida' && !item.fotos.some(function (f) { return f.n === fs.n; }) && (item.tiradas || []).indexOf(fs.n) < 0; }).forEach(function (fs) { item.fotos.push({ n: fs.n, nPedido: fs.n, sha256: fs.sha256, tipo: fs.tipo, tamanho: fs.tamanho, estado: 'servidor' }); });
+          item.versaoBase = Number(lr.data.meu.versao) || item.versaoBase; item.pedidoId = novoPedidoId(deps.novoId); item.tentou = false;
+          item.releuArquivadas = true;   // o aviso junta-se na resposta (aplicarRespostaDiario)
+          continue;
+        }
+        m = { accao: 'parar', texto: m.texto };
+      }
       if ((m.accao === 'novo-n' || m.accao === 'novo-id') && ajustes < 3) {
         ajustes++;
         if (m.accao === 'novo-id') item.registoId = novoIdRegisto(deps.novoId);
@@ -431,7 +495,7 @@
         continue;
       }
       item.erro = m.texto;
-      if (m.accao === 'parar' || m.accao === 'corrigir') { item.estado = 'parado'; item.motivo = m.fechado ? 'dia-fechado' : (m.obra ? 'obra' : m.accao); item.campo = m.campo || ''; }
+      if (m.accao === 'parar' || m.accao === 'corrigir') { item.estado = 'parado'; item.motivo = m.fechado ? 'dia-fechado' : (m.obra ? 'obra' : (m.anulado ? 'anulado' : m.accao)); item.campo = m.campo || ''; }
       await guardar();
       return { estado: estadoDe(m), mensagem: m.texto, rede: !!m.rede, retryAfter: m.retryAfter || 0, campo: m.campo, longo: !!m.longo, revogado: !!m.revogado };
     }
@@ -464,6 +528,49 @@
     await guardar();
     return { estado: 'pendente', mensagem: 'Faltam fotos por enviar; tento outra vez.' };
   }
+
+  // ── Os comandos de um registo (13 nov 2026, liberdade de corrigir): anular e tirar uma foto ──
+  // Um item da fila (tipo 'diario-cmd'), como os dos trabalhos: com Desfazer (só segue depois do aviso, adiadoAte), sem rede
+  // fica na fila, e uma foto que um posto está a arquivar (FOTO_RESERVADA) repete-se mais tarde com o MESMO pedido.
+  /** o: { accao: 'anular' | 'foto-tirar', registoId, obraId, dia, n?, versaoBase?, contaId, contaNome, novoId, agora, adiarMs }. */
+  function itemComandoDiario(o) {
+    var agora = o.agora || new Date();
+    return { id: 'q-' + uuid(o.novoId), tipo: 'diario-cmd', accao: o.accao, estado: 'a-enviar', contaId: String(o.contaId || ''), contaNome: String(o.contaNome || ''),
+      registoId: String(o.registoId || ''), obraId: String(o.obraId || ''), dia: String(o.dia || ''), n: o.n == null ? null : Number(o.n), versaoBase: Number.isInteger(o.versaoBase) ? o.versaoBase : null,
+      pedidoId: novoPedidoId(o.novoId), criadoEm: agora.toISOString(), adiadoAte: o.adiarMs ? new Date(agora.getTime() + o.adiarMs).toISOString() : '',
+      equipas: [], fotos: [], tentou: false, resposta: null, erro: '', avisos: [] };
+  }
+  function corpoComandoDiario(item) {
+    if (item.accao === 'foto-tirar') return { id: item.registoId, n: item.n };
+    var c = { id: item.registoId, pedidoId: item.pedidoId }; if (Number.isInteger(item.versaoBase)) c.versaoBase = item.versaoBase; return c;
+  }
+  /** Leva um comando ao servidor. Devolve { estado: 'entregue'|'pendente'|'login'|'parar'|'corrigir'|'alheio', mensagem, data, … }. */
+  async function processarComandoDiario(item, deps) {
+    if (deps.contaId && item.contaId && item.contaId !== deps.contaId()) return { estado: 'alheio', mensagem: 'Isto é de ' + (item.contaNome || 'outra conta') + '; só essa conta o pode enviar.' };
+    if (deps.online && deps.online() === false) return { estado: 'pendente', rede: true, mensagem: mensagemDiario({ rede: true, online: false }).texto };
+    var antes = !!item.tentou;   // uma tentativa ANTERIOR (sem resposta) pode ter chegado ao servidor
+    item.tentou = true; if (deps.guardar) await deps.guardar(item);
+    var x = await pedir(deps, 'POST', item.accao === 'foto-tirar' ? '/movel/diario/foto-tirar' : '/movel/diario/anular', corpoComandoDiario(item));
+    if (x.ok) { item.resposta = x.data; item.erro = ''; item.estado = 'entregue'; item.entregueEm = (deps.agora ? deps.agora() : new Date()).toISOString(); if (deps.guardar) await deps.guardar(item); return { estado: 'entregue', data: x.data }; }
+    // revisão (C2, e a 2.ª): um 4xx com código prova que ESTA tentativa não se aplicou. De uma ANTERIOR (sem resposta) só o
+    // provam os códigos de COMANDO_PROVA_ANTERIOR (lista positiva, revisão de 8bf7d34f: as recusas da conta, da obra e de quem é
+    // o registo respondem antes de o SQL procurar o pedido, e podem mudar entre as tentativas)
+    if (!x.rede && x.status >= 400 && x.status < 500 && x.code && (!antes || COMANDO_PROVA_ANTERIOR.indexOf(x.code) >= 0)) item.tentou = false;
+    var m = mensagemDiario(x);
+    if (m.accao === 'reler-fotos') m = { accao: 'parar', texto: x.message || m.texto };   // um tirar de uma arquivada: pára (retira-a o DO ou o GP)
+    item.erro = m.texto;
+    if (m.accao === 'parar' || m.accao === 'corrigir') { item.estado = 'parado'; item.motivo = m.fechado ? 'dia-fechado' : (m.obra ? 'obra' : (m.anulado ? 'anulado' : 'parar')); }
+    if (deps.guardar) await deps.guardar(item);
+    return { estado: estadoDe(m), mensagem: m.texto, rede: !!m.rede, retryAfter: m.retryAfter || 0, longo: !!m.longo, reservada: !!m.reservada, revogado: !!m.revogado };
+  }
+  /** Os códigos que provam que NENHUMA tentativa anterior do comando se aplicou (doe_diario_anular e doe_diario_foto_tirar,
+      doe-backend/sql/doe-diario-obra-2026-11-11.sql): o corpo inválido (o mesmo em todas as tentativas), o registo ou a foto
+      que não existem, e o que o SQL só responde DEPOIS de procurar o pedido (anular) ou de ler o estado da foto (tirar: uma
+      foto já tirada responde ok). Fora daqui (ID_ALHEIO, SEM_PERFIL, OBRA_INVALIDA, NAO_ARQUIVISTA, CONTA_INACTIVA, os do
+      token, 401, 429…) uma tentativa anterior pode ter chegado. DIA_FECHADO também fica de fora (verificação de 02b9cc10): o
+      registo do pedido não é eterno, e uma repetição muito tardia pode estar a esconder um anular que já se aplicou. */
+  var COMANDO_PROVA_ANTERIOR = ['ID_INVALIDO', 'VALIDATION_ERROR', 'NAO_EXISTE', 'FOTO_NAO_DECLARADA', 'ID_EM_USO', 'FOTO_RESERVADA', 'FOTO_ARQUIVADA'];
+  function resumoComandoDiario(q) { return q.accao === 'foto-tirar' ? 'Tirar a foto ' + q.n : 'Anular o diário'; }
 
   // ── Os 7 dias (os meus registos) ──
   /** Uma coluna por dia: total, DOE e subempreiteiros, se há registo, fim de semana, hoje. Lê o histórico local da
@@ -535,6 +642,8 @@
     somarDias: somarDias, diaDaSemana: diaDaSemana, fimDeSemana: fimDeSemana, difDias: difDias, textoDiaMes: textoDiaMes, textoDiaCurto: textoDiaCurto, textoDiaLongo: textoDiaLongo, inicialDia: inicialDia, diaCurto: diaCurto, quandoFoi: quandoFoi,
     diaAtual: diaAtual, diaAberto: diaAberto, seteDias: seteDias, horaDe: horaDe,
     cacheVazia: cacheVazia, cacheDaConta: cacheDaConta, chaveDia: chaveDia, idRegistoDe: idRegistoDe, registarHistorico: registarHistorico, guardarHoje: guardarHoje, guardarObra: guardarObra,
+    guardarDiaLido: guardarDiaLido, aoAnulado: aoAnulado, podeNoRegisto: podeNoRegisto, anular: anular,
+    itemComandoDiario: itemComandoDiario, corpoComandoDiario: corpoComandoDiario, processarComandoDiario: processarComandoDiario, resumoComandoDiario: resumoComandoDiario, COMANDO_PROVA_ANTERIOR: COMANDO_PROVA_ANTERIOR,
     normNome: normNome, chaveEquipa: chaveEquipa, totalHomens: totalHomens, doeESub: doeESub, txtHomens: txtHomens, equipasParaEnviar: equipasParaEnviar, assinaturaEquipas: assinaturaEquipas,
     mudarHomens: mudarHomens, porEquipa: porEquipa, sugestoesLivres: sugestoesLivres, alternarFrase: alternarFrase, frasesPara: frasesPara,
     CONTRATO_MINIMO: CONTRATO_MINIMO, deltaEquipas: deltaEquipas, aplicarDeltaEquipas: aplicarDeltaEquipas, resumoDiferencas: resumoDiferencas, precisaContrato: precisaContrato, diasComMeu: diasComMeu,

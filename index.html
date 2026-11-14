@@ -98,6 +98,14 @@
     <section id="v-dia-envio" class="mv-env" hidden aria-labelledby="de-titulo"></section>
     <section id="v-diario7" hidden aria-label="Diário · 7 dias"></section>
     <section id="v-fila" hidden aria-label="Por enviar"></section>
+    <!-- Os trabalhos em falta (trabalhos-ecra.js, fatia 2a): a lista por Localização, o formulário e o «Registado» -->
+    <section id="v-tf" hidden aria-label="Trabalhos em falta"></section>
+    <section id="v-tf-form" hidden aria-label="Trabalho em falta"></section>
+    <section id="v-tf-envio" class="mv-env" hidden aria-labelledby="tf-e-titulo"></section>
+    <!-- Os bloqueios do cliente (bloqueios-ecra.js, fatia 2a, parte 3): a lista da obra por estado, o formulário e o «Registado» -->
+    <section id="v-bc" hidden aria-label="Bloqueios do cliente"></section>
+    <section id="v-bc-form" hidden aria-label="Bloqueio do cliente"></section>
+    <section id="v-bc-envio" class="mv-env" hidden aria-labelledby="bc-e-titulo"></section>
 
     <!-- Envio: a enviar, registada, recebida, guardada no telemóvel, não foi enviada -->
     <section id="v-envio" class="mv-env" hidden aria-labelledby="e-titulo">
@@ -131,12 +139,22 @@
     <div class="mv-barra-in" id="barra-dia" hidden></div>
     <div class="mv-barra-in mv-btns" id="barra-dia-env" hidden></div>
     <div class="mv-barra-in" id="barra-d7" hidden></div>
+    <div class="mv-barra-in" id="barra-tf" hidden></div>
+    <div class="mv-barra-in mv-btns" id="barra-tf-env" hidden></div>
+    <div class="mv-barra-in" id="barra-bc" hidden></div>
+    <div class="mv-barra-in mv-btns" id="barra-bc-env" hidden></div>
   </footer>
   <!-- A barra de destinos (Hoje · Tarefas · + · Pessoal · Conta): desenhada pela casca -->
   <nav class="mv-nav cinco" id="nav" aria-label="Destinos" hidden></nav>
   <div id="toast" class="mv-toast" role="status" aria-live="polite" hidden></div>
   <input type="file" id="d-cam" accept="image/*" capture="environment" class="oculto" tabindex="-1" aria-hidden="true">
   <input type="file" id="d-gal" accept="image/*" multiple class="oculto" tabindex="-1" aria-hidden="true">
+  <input type="file" id="t-cam" accept="image/*" capture="environment" class="oculto" tabindex="-1" aria-hidden="true">
+  <input type="file" id="t-gal" accept="image/*" multiple class="oculto" tabindex="-1" aria-hidden="true">
+  <input type="file" id="t-dep" accept="image/*" capture="environment" class="oculto" tabindex="-1" aria-hidden="true">
+  <input type="file" id="b-cam" accept="image/*" capture="environment" class="oculto" tabindex="-1" aria-hidden="true">
+  <input type="file" id="b-gal" accept="image/*" multiple class="oculto" tabindex="-1" aria-hidden="true">
+  <input type="file" id="b-mais" accept="image/*" capture="environment" class="oculto" tabindex="-1" aria-hidden="true">
 </div>
 
 <!-- Folhas que sobem do fundo: <dialog> com showModal (foco preso, Esc, o resto inerte); sem showModal, app.js faz o mesmo -->
@@ -186,6 +204,11 @@
 <script src="classificacao.js"></script>
 <script src="logica.js"></script>
 <script src="diario.js"></script>
+<script src="hoje.js"></script>
+<script src="trabalhos.js"></script>
+<script src="trabalhos-ecra.js"></script>
+<script src="bloqueios.js"></script>
+<script src="bloqueios-ecra.js"></script>
 <script src="icones.js"></script>
 <script src="casca.js"></script>
 <script src="app.js"></script>

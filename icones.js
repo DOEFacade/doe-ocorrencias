@@ -38,6 +38,9 @@ self.DOE_MOVEL_ICONES = {
     desligar: [['path',{d:'M12 3.5v8'}],['path',{d:'M7.2 6.5a7 7 0 1 0 9.6 0'}]],
     lapis: [['path',{d:'M14.5 5.5l4 4L9 19H5v-4z'}],['path',{d:'M12.5 7.5l4 4'}]],
     chave: [['circle',{cx:'8',cy:'15.5',r:'4'}],['path',{d:'M10.9 12.6l8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2'}]],
+    // 12 nov 2026, o Hoje da fatia 2a (protótipo DOEX-Telemovel-App-Prototipo.html): trabalhos em falta, material
+    falta: [['rect',{x:'5.5',y:'4.5',width:'13',height:'16',rx:'2'}],['path',{d:'M9 4.5V3h6v1.5M12 9v5M12 17v.1'}]],
+    caixa: [['path',{d:'M3.5 8L12 4l8.5 4v8.5L12 20.5 3.5 16.5z'}],['path',{d:'M3.5 8L12 12l8.5-4M12 12v8.5'}]],
   },
   produto: {
     'Vidro': [['rect',{x:'4.5',y:'3.5',width:'15',height:'17',rx:'1.5'}],['path',{d:'M8.5 10.5l4-4M8.5 15.5l7-7'}]],

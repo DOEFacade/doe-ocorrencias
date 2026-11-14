@@ -68,6 +68,21 @@
   --mv-tonal: var(--navy); --mv-tonal-t: var(--on-navy);   /* botão da faixa de acção: cheio no claro, tonal no escuro */
   --neutro: #B6C0CD;        /* do guia (gráficos): tom neutro */
   --mv-sub: var(--neutro);  /* subempreiteiros nas colunas (DOE é navy) */
+
+  /* O Hoje da fatia 2a (12 nov 2026; guia 13b, «O Hoje completo»): dos protótipos validados (App, Mosaico; Hoje com
+     todas as obras, variante D) */
+  --mv-b20-h: 20px;         /* barra alta dos trabalhos em falta, com os números dentro */
+  --mv-trama: 3px; --mv-trama-p: 5px;   /* a trama dos bloqueados (risca âmbar e o passo dela) */
+  --mv-tl7-h: 40px; --mv-tl7-p: 10px;   /* linha de tempo do cliente: altura; diâmetro do ponto */
+  --mv-anel-ama: inset 0 0 0 var(--mv-anel) var(--ama);   /* o ponto de um bloqueio por confirmar: só o anel âmbar (protótipo) */
+
+  /* Trabalhos em falta da fatia 2a (13 nov 2026; guia 13b, «Trabalhos em falta»): do protótipo validado DOEX-Telemovel-App-Prototipo.html */
+  --mv-circ: 26px;          /* círculo de «feito» (dentro de um alvo de 48) */
+  --mv-int-w: 52px; --mv-int-h: 32px; --mv-int-bola: 28px;   /* interruptor «Está bloqueado» */
+  --mv-b20-hg: 28px;        /* a barra alta dos trabalhos no resumo do ecrã (no bloco é --mv-b20-h) */
+  --mv-ob-mini-w: 64px; --mv-ob-mini-h: 28px; --mv-ob-num-w: 44px;   /* linha de uma obra (página Obras): colunas dos 7 dias em miniatura; «homens hoje» */
+  --mv-pag-ponto: 6px; --mv-pag-espreita: 10px;
+  --mv-borda-fina: inset 0 0 0 1px var(--fileteF);   /* a opção escolhida do selector de dois lugares (.mv-segm) */   /* pontos de paginação; a página Obras espreita na 1.ª abertura */
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -421,7 +436,7 @@ html.mv-casca #faixa, html.mv-casca #faixa-rede, html.mv-casca #alheios { displa
 .mv-rasc { flex: none; font-size: var(--mv-fs-sec); font-weight: 600; color: var(--ama); }
 .mv-rasc.neu { color: var(--t2); }
 .ama-t { color: var(--ama); font-weight: 600; }
-.mv-lo-n small { display: block; font-size: var(--mv-fs-leg); color: var(--t2); font-weight: 500; }
+.mv-lo-n small { display: block; font-size: var(--mv-fs-leg); color: var(--t2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }   /* fecho da 2a: a linha de baixo também com reticências (a 360 px cortava a meio da letra) */
 
 /* barra de destinos */
 .mv-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: 1fr 1fr var(--mv-linha-g) 1fr 1fr; align-items: center; min-height: calc(var(--mv-nav-h) + var(--mv-sa-bot)); padding: 0 calc(var(--e2) + var(--mv-sa-dir)) var(--mv-sa-bot) calc(var(--e2) + var(--mv-sa-esq)); background: var(--fundo); border-top: 1px solid var(--filete); }
@@ -537,6 +552,92 @@ html.mv-casca #faixa, html.mv-casca #faixa-rede, html.mv-casca #alheios { displa
 .mv-hoje.entra .mv-g7-c { animation: mv-cresce-y var(--mv-d-cresce) var(--curva) both; animation-delay: calc(var(--mv-d-entra) + var(--i, 0) * var(--mv-d-cascata) / 2); }
 @media (max-width: 23.125em) { .mv-hoje { margin: 0 calc(-1 * var(--e1)); } .mv-hoje .mv-mosg { gap: var(--e2); } .mv-hoje .mv-mos { padding: var(--e4) var(--e3); } }
 
+/* ══════════ O Hoje da fatia 2a (12 nov 2026): cópia dos protótipos validados (App: o Mosaico; Hoje com todas as obras,
+   variante D). Os blocos Trabalhos e Cliente, o bloco por vir, a barra alta, a linha de tempo ══════════ */
+.neg-t { color: var(--neg); font-weight: 600; } .pos-t { color: var(--pos); font-weight: 600; } .neu-t { color: var(--t2); font-weight: 600; } .nav-t { color: var(--navy); font-weight: 600; }
+.mv-ponto.neg { background: var(--neg); }
+.mv-mos-cap { display: block; margin-top: var(--e2); height: var(--e4); font-size: var(--mv-fs-leg); font-weight: 500; line-height: var(--e4); color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.mv-mos-cap + .mv-mos-cap { margin-top: 0; }
+/* um bloco que ainda não tem dados (funcionalidade por vir): o contorno tracejado, sem número nem gráfico */
+.mv-mos.embreve { background: none; border-style: dashed; border-color: var(--fileteF); }
+.mv-mos.embreve .mv-mos-l, .mv-mos.embreve .mv-mos-c { color: var(--t3); }
+.mv-mos.embreve:active { transform: none; background: none; }
+/* barra alta de 20 px com os números dentro (trabalhos em falta) */
+.mv-b20 { display: flex; gap: var(--mv-fino); height: var(--mv-b20-h); width: 100%; border-radius: var(--r-s); overflow: hidden; }
+.mv-b20 > i { font-style: normal; display: flex; align-items: center; justify-content: center; min-width: var(--e5); height: 100%; transform-origin: left center; }
+.mv-b20 > i b { font-size: var(--mv-fs-ini); font-weight: 650; line-height: var(--mv-lh-justo); color: var(--on-navy); font-variant-numeric: tabular-nums; }
+.mv-b20 .neg { background: var(--neg); }
+.mv-b20 .bloq { background: repeating-linear-gradient(-45deg, var(--ama) 0 var(--mv-trama), var(--amaF) var(--mv-trama) var(--mv-trama-p)); }
+.mv-b20 .bloq b { background: var(--ama); border-radius: var(--r-xs); padding: var(--mv-fino) var(--e1); }
+.mv-b20 .nav { background: var(--navy); }
+.mv-b20 .cin { background: var(--neutro); }
+.mv-b20 .cin b { color: var(--tinta); }
+/* linha de tempo dos bloqueios do cliente (2 semanas até hoje): o ponto do mais antigo, com a idade */
+.mv-tl7 { display: flex; flex-direction: column; width: 100%; }
+.mv-tl7-a { position: relative; height: var(--mv-tl7-h); border-bottom: 1px solid var(--fileteF); }
+.mv-tl7-a > i { position: absolute; width: var(--mv-tl7-p); height: var(--mv-tl7-p); border-radius: 50%; transform-origin: center; }
+.mv-tl7-a > i.neg { background: var(--neg); } .mv-tl7-a > i.ama { background: var(--ama); } .mv-tl7-a > i.cin { background: var(--neutro); }
+.mv-tl7-a > i.conf { background: var(--papel); box-shadow: var(--mv-anel-ama); }   /* por confirmar: só o anel (protótipo) */
+.mv-tl7-v { position: absolute; top: 0; font-size: var(--mv-fs-ini); line-height: var(--e3); font-weight: 650; color: var(--tinta); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mv-tl7-d { display: flex; justify-content: space-between; margin-top: var(--e1); font-size: var(--mv-fs-ini); line-height: var(--e3); color: var(--t3); }
+.mv-hoje.entra .mv-b20 > i { animation: mv-cresce-x var(--mv-d-cresce) var(--curva) both; animation-delay: var(--mv-d-entra); }
+.mv-hoje.entra .mv-tl7-a > i { animation: mv-cresce var(--mv-d-cresce) var(--curva) both; animation-delay: calc(var(--mv-d-entra) + var(--i, 0) * var(--mv-d-cascata)); }
+@keyframes mv-cresce-x { from { transform: scaleX(0); } }
+@keyframes mv-cresce { from { transform: scale(0); } }
+/* esqueleto dos quatro blocos */
+.mv-sk.w60 { width: 60%; } .mv-sk.w70 { width: 70%; }
+.mv-mos.sk .mv-mos-v .mv-sk + .mv-sk { margin-top: var(--e2); }
+/* folhas dos blocos: o total, os números por estado (com a parte, por baixo), por obra */
+.mv-rl > span small { display: block; font-size: var(--mv-fs-leg); color: var(--t3); }
+.mv-rl b.mv-rl-tot { font-size: var(--mv-fs-tit); font-weight: 650; }
+.mv-rl b.neg-t, .mv-rl b.ama-t { font-weight: 650; }
+.mv-lo-ir .mv-ic { visibility: visible; color: var(--t3); width: var(--mv-ic-pp); height: var(--mv-ic-pp); }
+
+/* Hoje com várias obras (variante D do protótipo validado): Geral · Obras lado a lado, com encaixe; o selector de cima
+   troca com um toque; a página escondida é inert e não alonga o rolar vertical da que se vê */
+.mv-grupo { background: var(--papel); border: 1px solid var(--filete); border-radius: var(--r-xl); padding: 0 var(--e3) 0 var(--e1); }
+.mv-segm { display: flex; gap: var(--e1); padding: var(--e1); background: var(--papel2); border-radius: var(--r-l); }
+.mv-segm button { flex: 1; min-width: 0; min-height: var(--mv-alvo); border: 0; background: none; border-radius: var(--r-m); font-size: var(--mv-fs-sec); font-weight: 600; color: var(--t2); padding: 0 var(--e2); line-height: var(--mv-lh-op); }
+.mv-segm button[aria-pressed="true"] { background: var(--papel); color: var(--tinta); box-shadow: var(--mv-borda-fina); }
+.hx-volta { align-self: flex-start; display: inline-flex; align-items: center; gap: var(--mv-fino); min-height: var(--mv-alvo); margin: calc(-1 * var(--e2)) 0 calc(-1 * var(--e1)) calc(-1 * var(--e1)); padding: 0 var(--e2) 0 0; border: 0; background: none; color: var(--navy); font-size: var(--mv-fs-sec); font-weight: 600; }
+.hx-volta .mv-ic { width: var(--mv-ic-p); height: var(--mv-ic-p); }
+.hx-sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e3); margin-bottom: var(--e1); }
+.hx-sec-h h2 { font-size: var(--mv-fs-leg); font-weight: 600; letter-spacing: var(--mv-ls-rot); color: var(--t2); }
+.hx-sec-h span { font-size: var(--mv-fs-leg); color: var(--t3); }
+.hx-ob { display: grid; grid-template-columns: minmax(0, 1fr) var(--mv-ob-mini-w) var(--mv-ob-num-w) var(--mv-ic-pp); align-items: center; column-gap: var(--e3); width: 100%; min-height: var(--mv-linha-g); padding: var(--e3) 0; border: 0; border-top: 1px solid var(--filete); background: none; text-align: left; color: var(--tinta); transition: background-color var(--d-rapido) ease-out; }
+.hx-ob:active { background: var(--papel2); }
+.hx-ob-t { min-width: 0; display: flex; flex-direction: column; gap: var(--mv-fino); }
+.hx-ob-t b { font-size: var(--mv-fs-txt); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hx-ob-t b code { margin-right: var(--e2); font-family: var(--f-sans); font-size: var(--mv-fs-sec); font-weight: 650; letter-spacing: var(--mv-ls-rot); color: var(--tinta); }
+.hx-ob-t small { font-size: var(--mv-fs-leg); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hx-ob > .mv-ic { width: var(--mv-ic-pp); height: var(--mv-ic-pp); color: var(--t3); }
+.hx-mini { display: flex; align-items: flex-end; gap: var(--mv-fino); height: var(--mv-ob-mini-h); border-bottom: 1px solid var(--fileteF); }
+.hx-mini > i { flex: 1; display: flex; flex-direction: column-reverse; gap: 1px; height: 100%; }
+.hx-mini > i > i { display: block; border-radius: 1px; }
+.hx-mini .doe { background: var(--navy); } .hx-mini .sub { background: var(--mv-sub); }
+.hx-mini .por { border: 1px dashed var(--t3); background: none; }
+.hx-mini .fds { opacity: var(--mv-op-inativo); }
+.hx-num { text-align: right; font-variant-numeric: tabular-nums; }
+.hx-num b { display: block; font-size: var(--mv-fs-tit); font-weight: 600; line-height: var(--mv-lh-justo); }
+.hx-num small { font-size: var(--mv-fs-ini); color: var(--t3); }
+.hx-num.nada b { color: var(--t3); font-weight: 500; }
+.hx-segm-l { display: flex; flex-direction: column; align-items: center; gap: var(--e2); margin-top: var(--e4); }
+.hx-segm { width: 100%; }
+.hx-pontos { display: flex; gap: var(--mv-pag-ponto); }
+.hx-pontos i { width: var(--mv-pag-ponto); height: var(--mv-pag-ponto); border-radius: 50%; background: var(--fileteF); }
+.hx-pontos i.on { background: var(--t2); }
+.hx-pags { --hx-mar: var(--e4); display: flex; align-items: flex-start; gap: var(--e3); overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 calc(-1 * var(--hx-mar)); padding: 0 var(--hx-mar) var(--e1); scroll-padding: 0 var(--hx-mar); }
+.hx-pags::-webkit-scrollbar { display: none; }
+.hx-pag { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+.hx-pags.espreita .hx-pag:first-child { flex-basis: calc(100% - var(--mv-pag-espreita)); }
+.hx-pags > .hx-pag[inert] { max-height: 100vh; overflow: hidden; }
+.hx-pag > .mv-hcab { padding-top: 0; }
+.hx-grupo-d { margin-top: var(--e5); padding: var(--e3) var(--e4) 0; }
+.hx-grupo-d .hx-sec-h { margin-bottom: 0; }
+.hx-grupo-d .hx-sec-h + .hx-ob { border-top-color: transparent; }
+.hx-pontos-b { display: flex; align-items: center; justify-content: center; gap: var(--e2); margin-top: var(--e3); font-size: var(--mv-fs-leg); color: var(--t3); }
+@media (max-width: 23.125em) { .hx-pags { --hx-mar: var(--e3); } }
+
 /* Diário de obra: equipas com − n +, frases de um toque, Localizações, fotos já enviadas */
 .mv-como { margin: 0 0 var(--e2); }
 .mv-tot { font-weight: 600; color: var(--tinta); }
@@ -577,3 +678,91 @@ html.mv-teclado #b-dia { min-height: var(--mv-alvo); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after, .mv-folha::backdrop { transition: none !important; animation: none !important; }
 }
+
+/* ── Trabalhos em falta (fatia 2a, 13 nov 2026; protótipo validado DOEX-Telemovel-App-Prototipo.html, ecrãs «Trabalhos em falta») ── */
+.mv-sumv { margin-top: var(--e4); padding: var(--e4); background: var(--papel); border: 1px solid var(--filete); border-radius: var(--r-xl); }
+.mv-sumv .mv-b20 { height: var(--mv-b20-hg); }
+.mv-sumv .mv-b20 > i b { font-size: var(--mv-fs-leg); }
+.mv-leg { display: flex; flex-direction: column; gap: var(--mv-fino); font-size: var(--mv-fs-leg); color: var(--t2); line-height: var(--mv-lh-op); }
+.mv-leg.linha { flex-direction: row; flex-wrap: wrap; gap: var(--e1) var(--e4); margin-top: var(--e3); }
+.mv-leg > span { display: inline-flex; align-items: center; gap: var(--e2); white-space: nowrap; }
+.mv-leg i { width: var(--e2); height: var(--e2); border-radius: var(--mv-fino); flex: none; }
+.mv-leg i.neg { background: var(--neg); } .mv-leg i.nav { background: var(--navy); } .mv-leg i.cin { background: var(--neutro); }
+.mv-leg i.bloq { background: repeating-linear-gradient(-45deg, var(--ama) 0 var(--mv-trama), var(--amaF) var(--mv-trama) var(--mv-trama-p)); }
+.mv-leg b { font-size: var(--mv-fs-leg); font-weight: 650; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.mv-tf-segm { margin-top: var(--e5); }
+.mv-tf-segm button { flex: 1; }
+.mv-lista-t { margin-top: var(--e5); }
+.mv-tl { display: flex; align-items: stretch; border-top: 1px solid var(--filete); transition: opacity var(--d-normal) ease-out; }
+.mv-tl:first-of-type { border-top-color: transparent; }
+.mv-tl-ok { flex: none; width: var(--mv-alvo); height: var(--mv-alvo); display: grid; place-items: center; border: 0; background: none; padding: 0; border-radius: 50%; align-self: center; margin-left: calc(-1 * var(--e3)); }
+.mv-circ { width: var(--mv-circ); height: var(--mv-circ); border-radius: 50%; border: var(--mv-anel) solid var(--t3); display: grid; place-items: center; transition: background-color var(--d-rapido) ease-out, border-color var(--d-rapido) ease-out; }
+.mv-circ .mv-ic { width: var(--mv-ic-xp); height: var(--mv-ic-xp); stroke-width: var(--mv-traco-forte); color: var(--on-navy); opacity: 0; transition: opacity var(--d-rapido) ease-out; }
+.mv-tl.feita .mv-circ { background: var(--navy); border-color: var(--navy); }
+.mv-tl.feita .mv-circ .mv-ic { opacity: 1; }
+.mv-tl-esp { flex: none; width: var(--mv-alvo); display: grid; place-items: center; color: var(--t3); align-self: center; margin-left: calc(-1 * var(--e3)); }
+.mv-tl-esp .mv-ic { width: var(--mv-ic-p); height: var(--mv-ic-p); }
+.mv-tl-t { flex: 1; min-width: 0; display: flex; flex-direction: row; align-items: center; gap: var(--e3); min-height: var(--mv-linha-g); padding: var(--e3) 0 var(--e3) var(--e1); border: 0; background: none; text-align: left; color: var(--tinta); border-radius: var(--r-m); }
+.mv-tf-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--mv-fino); }
+.mv-tf-tx b { font-size: var(--mv-fs-txt); font-weight: 500; line-height: var(--mv-lh-op); overflow-wrap: anywhere; }
+.mv-tf-tx small { font-size: var(--mv-fs-sec); color: var(--t2); line-height: var(--mv-lh-sec); }
+.mv-tl.feita .mv-tf-tx b { text-decoration: line-through; color: var(--t2); }
+.mv-tl.val .mv-tf-tx b { color: var(--t2); }
+.mv-tf-mini { width: var(--mv-alvo); height: var(--mv-alvo); border-radius: var(--r-m); object-fit: cover; flex: none; background: var(--papel2); display: grid; place-items: center; color: var(--t3); }
+.mv-tf-mini .mv-ic { width: var(--mv-ic-p); height: var(--mv-ic-p); }
+.mv-tl.val .mv-tf-mini { opacity: var(--mv-op-ocupado); }
+.mv-tf-erro { color: var(--neg); }
+.mv-rl b i { font-style: normal; }
+.mv-tf-fotos { display: grid; gap: var(--e2); }
+.mv-tf-foto { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--r-l); background: var(--papel2); }
+span.mv-tf-foto { display: grid; place-items: center; color: var(--t3); font-size: var(--mv-fs-sec); }
+.mv-hist { list-style: none; margin: 0; padding: 0; }
+.mv-hist li { display: flex; flex-direction: column; padding: var(--e2) 0; border-top: 1px solid var(--filete); font-size: var(--mv-fs-sec); }
+.mv-hist li:first-child { border-top-color: transparent; }
+.mv-hist b { font-weight: 500; }
+.mv-hist small { color: var(--t3); font-size: var(--mv-fs-leg); }
+.mv-pe2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e2); }
+.mv-folha-p .mv-folha-txt + .mv-btn, .mv-folha-p .mv-folha-txt + .mv-pe2 { margin-top: var(--e3); }
+.mv-folha-p .mv-link { margin-top: var(--e2); }
+.mv-data-in { margin-top: var(--e2); }
+.mv-intl { display: flex; align-items: center; gap: var(--e3); width: 100%; min-height: var(--mv-alvo-g); padding: var(--e2) 0; border: 0; border-top: 1px solid var(--filete); border-bottom: 1px solid var(--filete); background: none; text-align: left; color: var(--tinta); font-size: var(--mv-fs-txt); }
+.mv-intl > span:first-child { flex: 1; }
+.mv-intl small { display: block; font-size: var(--mv-fs-sec); color: var(--t2); }
+.mv-int { position: relative; width: var(--mv-int-w); height: var(--mv-int-h); border-radius: var(--mv-int-h); background: var(--fileteF); transition: background-color var(--d-rapido) ease-out; flex: none; }
+.mv-int::after { content: ""; position: absolute; top: calc((var(--mv-int-h) - var(--mv-int-bola)) / 2); left: calc((var(--mv-int-h) - var(--mv-int-bola)) / 2); width: var(--mv-int-bola); height: var(--mv-int-bola); border-radius: 50%; background: var(--on-navy); transition: transform var(--d-normal) var(--curva); }
+.mv-intl[aria-checked="true"] .mv-int { background: var(--navy); }
+.mv-intl[aria-checked="true"] .mv-int::after { transform: translateX(calc(var(--mv-int-w) - var(--mv-int-h))); }
+.mv-tf-quem { margin-top: var(--e3); }
+.mv-tf-bc { display: flex; align-items: center; gap: var(--e3); padding: var(--e3) 0; border-top: 1px solid var(--filete); }
+.mv-tf-bc .mv-fl-t { flex: 1; min-width: 0; }
+@media (prefers-reduced-motion: reduce) { .mv-tl, .mv-circ, .mv-circ .mv-ic, .mv-int, .mv-int::after { transition: none; } }
+/* Bloqueios do cliente (fatia 2a, parte 3, 13 nov 2026; bloqueios-ecra.js): a linha da lista (miniatura, o que precisamos
+   do cliente, Localização e trabalhos parados, o estado à direita), do protótipo validado. */
+.mv-bcl { display: flex; align-items: center; gap: var(--e3); width: 100%; min-height: var(--mv-linha-g); padding: var(--e2) 0; border: 0; border-top: 1px solid var(--filete); background: none; text-align: left; color: var(--tinta); }
+.mv-sec-h + .mv-bcl, .mv-sec > .mv-bcl:first-child { border-top-color: transparent; }
+.mv-bcl-f { width: var(--mv-mini); height: var(--mv-mini); border-radius: var(--r-m); object-fit: cover; flex: none; background: var(--papel2); display: grid; place-items: center; color: var(--t3); }
+.mv-bcl-f .mv-ic { width: var(--mv-ic-p); height: var(--mv-ic-p); }
+.mv-bcl-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--mv-fino); }
+.mv-bcl-t b { font-size: var(--mv-fs-txt); font-weight: 500; line-height: var(--mv-lh-op); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.mv-bcl-t small { font-size: var(--mv-fs-leg); color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mv-bcl-e { flex: none; display: flex; flex-direction: column; align-items: flex-end; text-align: right; max-width: 34%; font-size: var(--mv-fs-leg); line-height: var(--mv-lh-sec); }
+.mv-bcl-e > span { font-weight: 600; }
+.mv-bcl-e small { color: var(--t3); }
+.mv-bc-nota { margin: var(--e5) 0 0; }
+.mv-bc-lead { margin: 0; }
+/* Fecho da 2a (parte 4, 13 nov 2026): «Corrigir» na folha (o link e a Localização que abre por baixo), a foto que veio do
+   trabalho no formulário do bloqueio do cliente («Do trabalho», sobre a foto, como o ✕). */
+.mv-link-cor { margin-top: var(--e3); }
+.mv-cor-loc .mv-obra { margin-top: 0; }
+.mv-cor-loc .mv-lh:first-of-type { margin-top: var(--e3); }
+.mv-foto-rot { position: absolute; left: var(--e2); bottom: var(--e2); padding: var(--mv-fino) var(--e2); border-radius: var(--r-m); background: var(--mv-sobre-foto); color: var(--mv-sobre-foto-t); font-size: var(--mv-fs-leg); font-weight: 600; line-height: var(--mv-lh-sec); pointer-events: none; }
+/* Liberdade de corrigir (13 nov 2026): o botão que confirma um anular (tonal, a vermelho: desfaz-se, mas tira o registo da
+   contagem), o link de anular, e por baixo de cada foto de um trabalho ou de um bloqueio o «Tirar» / «Retirar» do `pode`. */
+.mv-btn.neg { background: var(--negF); border-color: var(--neg); color: var(--neg); }
+.mv-btn.neg[aria-disabled="true"] { background: var(--papel2); border-color: var(--filete); color: var(--t2); }
+.mv-link.mv-link-anular { color: var(--neg); }
+.mv-tf-fcel { display: grid; gap: 0; min-width: 0; }
+.mv-foto-acc { justify-self: start; }
+.mv-foto-nota { margin-top: var(--e1); }
+.mv-foto.a-tirar { opacity: var(--mv-op-inativo); }
+.mv-foto-atirar { font-size: var(--mv-fs-leg); color: var(--t2); }

@@ -194,8 +194,8 @@
   // ── Vistas, cabeçalho e progresso ──
   // As vistas: as da ocorrência (login, registo, envio) e as da casca (casca.js). Cada uma diz que barra tem em baixo:
   // a do formulário (por cima da barra de destinos, com «‹ Hoje» no cabeçalho) ou, no Hoje, a barra de destinos.
-  var VISTAS = ['v-login', 'v-registo', 'v-envio', 'v-hoje', 'v-diario', 'v-dia-envio', 'v-diario7', 'v-fila'];
-  var BARRA_DE = { 'v-registo': 'barra-reg', 'v-envio': 'barra-env', 'v-diario': 'barra-dia', 'v-dia-envio': 'barra-dia-env', 'v-diario7': 'barra-d7' };
+  var VISTAS = ['v-login', 'v-registo', 'v-envio', 'v-hoje', 'v-diario', 'v-dia-envio', 'v-diario7', 'v-fila', 'v-tf', 'v-tf-form', 'v-tf-envio', 'v-bc', 'v-bc-form', 'v-bc-envio'];
+  var BARRA_DE = { 'v-registo': 'barra-reg', 'v-envio': 'barra-env', 'v-diario': 'barra-dia', 'v-dia-envio': 'barra-dia-env', 'v-diario7': 'barra-d7', 'v-tf-form': 'barra-tf', 'v-tf-envio': 'barra-tf-env', 'v-bc-form': 'barra-bc', 'v-bc-envio': 'barra-bc-env' };   // v-tf e v-bc (as listas) não têm barra em baixo
   function ir(vista) {
     var mudou = est.vista !== vista;
     est.vista = vista;
@@ -207,7 +207,7 @@
     $('prog').hidden = vista !== 'v-registo';
     $('barra').hidden = !BARRA_DE[vista];
     Object.keys(BARRA_DE).forEach(function (v) { var b = $(BARRA_DE[v]); if (b) b.hidden = v !== vista; });
-    $('barra').classList.toggle('sem-fio', vista === 'v-envio' || vista === 'v-dia-envio');
+    $('barra').classList.toggle('sem-fio', vista === 'v-envio' || vista === 'v-dia-envio' || vista === 'v-tf-envio' || vista === 'v-bc-envio');
     if ($('nav')) $('nav').hidden = vista !== 'v-hoje';
     if (C && vista !== 'v-login') C.definirVista(vista);
     desenharCabecalho();
